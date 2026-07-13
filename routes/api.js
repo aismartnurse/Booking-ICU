@@ -206,6 +206,12 @@ router.post('/form-submissions/:id/decision', requireAdmin, async (req, res) => 
   res.json({ ok: true });
 });
 
+router.put('/form-submissions/:id/note', requireAdmin, async (req, res) => {
+  const { note } = req.body;
+  await db.run('UPDATE form_submissions SET decision_note=$1, updated_at=NOW() WHERE id=$2', [note||null, req.params.id]);
+  res.json({ ok: true });
+});
+
 router.put('/form-submissions/:id/urgency', requireAdmin, async (req, res) => {
   const { urgency } = req.body;
   if (!['emergency', 'urgent', 'normal'].includes(urgency)) return res.status(400).json({ error: 'invalid urgency' });
