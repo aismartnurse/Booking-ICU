@@ -225,7 +225,29 @@ router.put('/form-submissions/:id/icu-type', requireAdmin, async (req, res) => {
 router.put('/form-submissions/:id/status', requireAdmin, async (req, res) => {
   const { status } = req.body;
   if (!['pending','acknowledged','waiting_bed','failed'].includes(status)) return res.status(400).json({ error: 'invalid' });
+
+  const row = await db.get('SELECT * FROM form_submissions WHERE id = $1', [req.params.id]);
+  if (!row) return res.status(404).json({ error: 'not found' });
+
   await db.run('UPDATE form_submissions SET status=$1, updated_at=NOW() WHERE id=$2', [status, req.params.id]);
+
+  // ส่ง LINE แจ้งเตือนทุก approver
+  const statusLabel = {
+    pending: '⏳ รอดำเนินการ',
+    acknowledged: '✅ รับทราบ รอดำเนินการ',
+    waiting_bed: '🟡 รับทราบ รอเตียงว่าง',
+    failed: '❌ คำขอยังไม่สำเร็จ'
+  };
+  const msg =
+    `🔔 อัปเดตสถานะคำขอ ICU\n` +
+    `ผู้ป่วย: ${row.patient_name} (HN: ${row.patient_hn})\n` +
+    `หอผู้ป่วย: ${row.ward}\n` +
+    `ประเภท: ${row.form_type === 'or' ? 'ICU for OR' : 'ICU Crisis'}\n` +
+    `สถานะใหม่: ${statusLabel[status]}`;
+
+  const { notifyAllApprovers } = require('../lib/line');
+  notifyAllApprovers(msg).catch(console.error);
+
   res.json({ ok: true });
 });
 
