@@ -174,6 +174,12 @@ router.post('/form-submission', async (req, res) => {
   }
 });
 
+// Public endpoint สำหรับหน้า status.html (ไม่ต้อง login)
+router.get('/public/form-submissions', async (req, res) => {
+  const rows = await db.all("SELECT * FROM form_submissions WHERE status = 'pending' ORDER BY submitted_at DESC");
+  res.json(rows);
+});
+
 router.get('/form-submissions', requireAdmin, async (req, res) => {
   const { status } = req.query;
   const rows = status
