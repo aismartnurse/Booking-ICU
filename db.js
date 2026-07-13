@@ -89,6 +89,21 @@ async function initDB() {
       updated_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
   `);
+
+  // Migration: เพิ่ม column ใหม่สำหรับ DB เก่า (ถ้ามีอยู่แล้วจะ ignore)
+  const migrations = [
+    "ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending'",
+    "ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS urgency TEXT DEFAULT 'normal'",
+    "ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS admission_status TEXT DEFAULT 'pending'",
+    "ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS assigned_bed TEXT",
+    "ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS decision_note TEXT",
+    "ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS approver_line_id TEXT",
+    "ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW()",
+  ];
+  for (const sql of migrations) {
+    try { await pool.query(sql); } catch (e) { /* ignore */ }
+  }
+
   console.log('DB: ตารางพร้อมใช้งาน');
 }
 
