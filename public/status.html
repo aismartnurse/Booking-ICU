@@ -124,7 +124,7 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>#</th><th>ผู้ป่วย</th><th>หอผู้ป่วยต้นทาง</th><th>ความเร่งด่วน</th><th>เวลาที่ขอ</th><th>สถานะ</th></tr>
+          <tr><th>#</th><th>ผู้ป่วย</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>ICU Type</th><th>ความเร่งด่วน</th><th>เวลาที่ขอ</th><th>สถานะ</th></tr>
         </thead>
         <tbody id="pendingBody"><tr><td colspan="5" class="empty">กำลังโหลด...</td></tr></tbody>
       </table>
@@ -153,7 +153,7 @@ async function loadData() {
   try {
     const [beds, pending] = await Promise.all([
       fetch('/api/beds').then(r => r.json()),
-      fetch('/api/requests?status=pending').then(r => r.json()),
+      fetch('/api/public/form-submissions').then(r => r.json()),
     ]);
 
     // สรุปตัวเลข
@@ -172,18 +172,24 @@ async function loadData() {
       </div>
     `).join('');
 
+    const urgDot = { emergency:'🔴', urgent:'🟡', normal:'🟢' };
+    const formType = { or:'OR', crisis:'Crisis' };
+    const icuType = { plan:'Plan', unplan:'Unplan' };
+
     document.getElementById('pendingBody').innerHTML = pending.length
       ? pending.map(r => `
           <tr>
             <td>#${r.id}</td>
-            <td><b>${r.patient_name}</b><br><span style="font-size:11px;color:#888;">HN: ${r.patient_hn}</span></td>
-            <td>${r.ward}</td>
-            <td><span class="badge ${r.urgency}">${urgencyLabel[r.urgency]}</span></td>
-            <td>${new Date(r.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td>
+            <td><b>${r.patient_name || '-'}</b><br><span style="font-size:11px;color:#888;">HN: ${r.patient_hn || '-'}</span></td>
+            <td>${r.ward || '-'}</td>
+            <td><span class="badge ${r.form_type || ''}">${formType[r.form_type] || r.form_type || '-'}</span></td>
+            <td>${r.icu_type ? `<span class="badge ${r.icu_type}">${icuType[r.icu_type]}</span>` : '-'}</td>
+            <td>${urgDot[r.urgency || 'normal'] || '🟢'}</td>
+            <td>${new Date(r.submitted_at).toLocaleString('th-TH', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</td>
             <td><span class="badge pending">⏳ รอดำเนินการ</span></td>
           </tr>
         `).join('')
-      : '<tr><td colspan="6" class="empty">✅ ไม่มีคำขอค้างอยู่ในขณะนี้</td></tr>';
+      : '<tr><td colspan="8" class="empty">✅ ไม่มีคำขอค้างอยู่ในขณะนี้</td></tr>';
 
   } catch (e) {
     document.getElementById('bedsGrid').textContent = 'ไม่สามารถโหลดข้อมูลได้ กรุณารีเฟรชหน้า';
@@ -191,7 +197,7 @@ async function loadData() {
 }
 
 loadData();
-setInterval(loadData, 10000); // โหลดข้อมูลใหม่ทุก 10 วินาที (แยกจาก meta refresh)
+setInterval(loadData, 10000);
 </script>
 </body>
 </html>
