@@ -88,13 +88,9 @@
     <section>
       <h2>คำขอจองเตียง ICU</h2>
       <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
-        <div class="tab-bar" style="margin:0;">
-          <button class="tab-btn active" id="tabPending">รอดำเนินการ</button>
-          <button class="tab-btn" id="tabAll">ทั้งหมด</button>
-        </div>
         <input id="searchInput" type="text" placeholder="🔍 ค้นหาชื่อ, HN, หอผู้ป่วย..." style="padding:7px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-width:220px;" oninput="renderSubs()" />
         <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
-          <label style="color:#555;">📅 วันที่จอง:</label>
+          <label style="color:#555;">📅 วันที่ต้องการใช้เตียง:</label>
           <input id="dateFilter" type="date" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;" onchange="renderSubs()" />
           <button onclick="document.getElementById('dateFilter').value='';renderSubs();" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">✕ ล้าง</button>
         </div>
@@ -130,7 +126,8 @@
 
 <script>
 var allSubs = [];
-var currentTab = 'pending';
+
+
 
 var bedStatusLabel = { available:'ว่าง', occupied:'มีผู้ป่วย', cleaning:'ทำความสะอาด', closed:'ปิดใช้งาน' };
 var nextStatus = { available:'occupied', occupied:'cleaning', cleaning:'available', closed:'available' };
@@ -163,8 +160,8 @@ document.getElementById('loginBtn').onclick = async function() {
 };
 document.getElementById('logoutBtn').onclick = async function() { await fetch('/api/admin/logout',{method:'POST'}); location.reload(); };
 document.getElementById('settingsBtn').onclick = function() { document.getElementById('settingsModal').classList.add('show'); };
-document.getElementById('tabPending').onclick = function() { currentTab='pending'; document.getElementById('tabPending').className='tab-btn active'; document.getElementById('tabAll').className='tab-btn'; renderSubs(); };
-document.getElementById('tabAll').onclick = function() { currentTab='all'; document.getElementById('tabAll').className='tab-btn active'; document.getElementById('tabPending').className='tab-btn'; renderSubs(); };
+
+
 
 // ปิด modal เมื่อคลิกนอก
 ['detailModal','settingsModal'].forEach(function(id) {
@@ -212,7 +209,7 @@ function renderSubs() {
   var search = (document.getElementById('searchInput').value||'').toLowerCase();
   var dateFilter = document.getElementById('dateFilter').value; // YYYY-MM-DD
 
-  var rows = currentTab==='pending' ? allSubs.filter(function(r){return r.status==='pending';}) : allSubs;
+  var rows = allSubs; // แสดงทุกคำขอเสมอ
 
   // กรองตาม search
   if (search) {
