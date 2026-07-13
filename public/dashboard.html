@@ -87,12 +87,20 @@
     </section>
     <section>
       <h2>คำขอจองเตียง ICU</h2>
-      <div class="tab-bar">
-        <button class="tab-btn active" id="tabPending">รอดำเนินการ</button>
-        <button class="tab-btn" id="tabAll">ทั้งหมด</button>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+        <div class="tab-bar" style="margin:0;">
+          <button class="tab-btn active" id="tabPending">รอดำเนินการ</button>
+          <button class="tab-btn" id="tabAll">ทั้งหมด</button>
+        </div>
+        <input id="searchInput" type="text" placeholder="🔍 ค้นหาชื่อ, HN, หอผู้ป่วย..." style="padding:7px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-width:220px;" oninput="renderSubs()" />
+        <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
+          <label style="color:#555;">📅 วันที่จอง:</label>
+          <input id="dateFilter" type="date" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;" onchange="renderSubs()" />
+          <button onclick="document.getElementById('dateFilter').value='';renderSubs();" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">✕ ล้าง</button>
+        </div>
       </div>
       <table>
-        <thead><tr><th>#</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>ICU Type</th><th>ความเร่งด่วน</th><th>สถานะเข้า ICU</th><th>เวลา</th><th>สถานะ / ดำเนินการ</th></tr></thead>
+        <thead><tr><th>#</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>ICU Type</th><th>วันที่จอง</th><th>ความเร่งด่วน</th><th>สถานะเข้า ICU</th><th>เวลาที่ส่ง</th><th>สถานะ / ดำเนินการ</th></tr></thead>
         <tbody id="subBody"></tbody>
       </table>
     </section>
@@ -184,25 +192,52 @@ async function cycleBed(id, cur) {
 }
 
 function renderSubs() {
+  var search = (document.getElementById('searchInput').value||'').toLowerCase();
+  var dateFilter = document.getElementById('dateFilter').value; // YYYY-MM-DD
+
   var rows = currentTab==='pending' ? allSubs.filter(function(r){return r.status==='pending';}) : allSubs;
+
+  // กรองตาม search
+  if (search) {
+    rows = rows.filter(function(r) {
+      return (r.patient_name||'').toLowerCase().includes(search)
+          || (r.patient_hn||'').toLowerCase().includes(search)
+          || (r.ward||'').toLowerCase().includes(search);
+    });
+  }
+
+  // กรองตามวันที่จอง (booking_date จาก extra_data)
+  if (dateFilter) {
+    rows = rows.filter(function(r) {
+      var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
+      var bd = extra.booking_date || '';
+      // แปลง booking_date (14/7/2026 หรือ 2026-07-14) ให้เทียบกับ dateFilter
+      if (!bd) return false;
+      try {
+        var parts = bd.includes('/') ? bd.split('/') : bd.split('-');
+        var d, m, y;
+        if (bd.includes('/')) { d=parts[0]; m=parts[1]; y=parts[2]; }
+        else { y=parts[0]; m=parts[1]; d=parts[2]; }
+        var bdFormatted = y.padStart(4,'0')+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0');
+        return bdFormatted === dateFilter;
+      } catch(e) { return false; }
+    });
+  }
+
   if (!rows.length) {
     document.getElementById('subBody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;">ไม่มีรายการ</td></tr>';
     return;
   }
+
   document.getElementById('subBody').innerHTML = rows.map(function(r) {
     var urg = r.urgency||'normal';
     var adm = r.admission_status||'pending';
     var st = r.status||'pending';
+    var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
+    var bookingDate = extra.booking_date || '-';
 
-    // urgency single button วนสี
     var urgNext = {normal:'urgent', urgent:'emergency', emergency:'normal'};
-    var urgTip = {normal:'ปกติ → คลิกเปลี่ยน', urgent:'ปานกลาง → คลิกเปลี่ยน', emergency:'เร่งด่วนมาก → คลิกเปลี่ยน'};
-    var dot = '<button class="urg-btn '+urg+'" title="'+urgTip[urg]+'" onclick="updateUrg('+r.id+',\''+urgNext[urg]+'\')"></button>';
-
-    // action dropdown
-    var actionSel = st==='pending'
-      ? '<select class="action-sel" onchange="handleAction('+r.id+',this)"><option value="">-- เลือก --</option><option value="approved">✅ อนุมัติ</option><option value="rejected">❌ ปฏิเสธ</option></select>'
-      : '<span style="color:#aaa;font-size:11px;">ดำเนินการแล้ว</span>';
+    var dot = '<button class="urg-btn '+urg+'" title="คลิกเปลี่ยน" onclick="updateUrg('+r.id+',\''+urgNext[urg]+'\')"></button>';
 
     return '<tr>'
       +'<td>#'+r.id+'</td>'
@@ -210,6 +245,7 @@ function renderSubs() {
       +'<td>'+(r.ward||'-')+'</td>'
       +'<td><span class="badge '+(r.form_type||'')+'">'+(formTypeLabel[r.form_type]||r.form_type||'-')+'</span></td>'
       +'<td>'+(r.icu_type?'<span class="badge '+r.icu_type+'">'+icuTypeLabel[r.icu_type]+'</span>':'-')+'</td>'
+      +'<td style="font-weight:600;color:#2c3e50;">'+bookingDate+'</td>'
       +'<td>'+dot+'</td>'
       +'<td><select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
         +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
