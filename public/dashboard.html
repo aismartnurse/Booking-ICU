@@ -262,26 +262,49 @@ async function showDetail(id) {
   var r = await fetch('/api/form-submissions/'+id).then(function(r){return r.json();});
   var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
   document.getElementById('detailTitle').textContent=(r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')';
-  var urgTxt = {emergency:'🔴 เร่งด่วนมาก', urgent:'🟡 ปานกลาง', normal:'🟢 ปกติ'};
+
   var rows=[
+    ['เวลาที่ส่ง', new Date(r.submitted_at).toLocaleString('th-TH')],
     ['ประเภท', formTypeLabel[r.form_type]||r.form_type||'-'],
     ['ชื่อ-สกุล', r.patient_name||'-'],
     ['HN', r.patient_hn||'-'],
     ['หอผู้ป่วย', r.ward||'-'],
     ['Diagnosis', r.diagnosis||'-'],
-    ['ICU Type', icuTypeLabel[r.icu_type]||'-'],
-    ['ความเร่งด่วน', urgTxt[r.urgency||'normal']||'-'],
-    ['สถานะเข้า ICU', admLabel[r.admission_status||'pending']||'-'],
-    ['สถานะ', statusLabel[r.status]||r.status||'-'],
-    ['เตียงที่จัดให้', r.assigned_bed||'-'],
-    ['หมายเหตุ', r.decision_note||'-'],
-  ];
-  Object.entries(extra).forEach(function(kv){ rows.push([fieldLabels[kv[0]]||kv[0], kv[1]||'-']); });
-  rows.push(['เวลาที่ส่ง', new Date(r.submitted_at).toLocaleString('th-TH')]);
-  document.getElementById('detailBody').innerHTML=rows.map(function(rv){
+    ['ชื่อการผ่าตัด', extra.surgery_name||'-'],
+    ['แพทย์ผู้ผ่าตัด', extra.doctor||'-'],
+    ['วันที่ต้องการจอง', extra.booking_date||'-'],
+    ['ระบบ', extra.system||''],
+    // Crisis fields
+    ['SBP (mmHg.)', extra.sbp||''],
+    ['HR (bpm.)', extra.hr||''],
+    ['RR (bpm.)', extra.rr||''],
+    ['Temp (°C)', extra.temp||''],
+    ['SOS score', extra.sos_score||''],
+    ['Conscious', extra.conscious||''],
+    ['ปริมาณปัสสาวะ/8hrs', extra.urine||''],
+    ['เรื่องที่ต้องการจอง', extra.reason||''],
+  ].filter(function(rv){ return rv[1] && rv[1]!=='-'; });
+
+  document.getElementById('detailBody').innerHTML = rows.map(function(rv){
     return '<div class="modal-row"><b>'+rv[0]+'</b><span>'+rv[1]+'</span></div>';
-  }).join('');
+  }).join('')
+  + '<div class="modal-row" style="flex-direction:column;gap:6px;">'
+  + '<b>หมายเหตุ</b>'
+  + '<textarea id="noteInput" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-height:60px;resize:vertical;">'+(r.decision_note||'')+'</textarea>'
+  + '<button onclick="saveNote('+id+')" style="padding:8px;background:#06c755;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">💾 บันทึกหมายเหตุ</button>'
+  + '</div>';
+
   document.getElementById('detailModal').classList.add('show');
+}
+
+async function saveNote(id) {
+  var note = document.getElementById('noteInput').value;
+  await fetch('/api/form-submissions/'+id+'/note', {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({note:note})
+  });
+  alert('บันทึกเรียบร้อย');
+  loadAll();
 }
 
 function renderUsers(rows) {
