@@ -54,7 +54,7 @@
   /* modals */
   .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; }
   .modal-overlay.show { display:flex; }
-  .modal { background:#fff; border-radius:14px; padding:24px; max-width:520px; width:92%; max-height:85vh; overflow-y:auto; }
+  .modal { background:#fff; border-radius:14px; padding:24px; max-width:500px; width:92%; max-height:85vh; overflow-y:auto; position:relative; }
   .modal h3 { margin:0 0 14px; font-size:16px; }
   .modal-row { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid #f0f0f0; font-size:13px; }
   .modal-row b { color:#555; min-width:140px; }
@@ -330,7 +330,22 @@ async function showDetail(id) {
   + '<button onclick="saveNote('+id+')" style="padding:8px;background:#06c755;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">💾 บันทึกหมายเหตุ</button>'
   + '</div>';
 
+  // ปุ่มลบมุมบนขวา
+  document.getElementById('detailTitle').innerHTML =
+    (r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')'
+    + '<button onclick="deleteSubmission('+id+')" title="ลบคำขอนี้" '
+    + 'style="position:absolute;top:16px;right:16px;background:#e74c3c;color:#fff;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:14px;line-height:1;">🗑</button>';
+
   document.getElementById('detailModal').classList.add('show');
+}
+
+async function deleteSubmission(id) {
+  var pw = prompt('ใส่รหัสผ่านเพื่อยืนยันการลบ:');
+  if (pw === null) return;
+  if (pw !== '1234') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
+  if (!confirm('ยืนยันลบคำขอ #'+id+' ?')) return;
+  await fetch('/api/form-submissions/'+id, { method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:'1234'}) });
+  loadAll();
 }
 
 async function saveNote(id) {
