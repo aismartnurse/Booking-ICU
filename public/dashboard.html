@@ -325,13 +325,12 @@ async function showDetail(id) {
     return '<div class="modal-row"><b>'+rv[0]+'</b><span>'+rv[1]+'</span></div>';
   }).join('')
   + '<div class="modal-row" style="flex-direction:column;gap:6px;">'
+  + '<div style="display:flex;justify-content:space-between;align-items:center;">'
   + '<b>หมายเหตุ</b>'
+  + '<button onclick="deleteSubmission('+id+')" title="ลบคำขอนี้" style="background:none;border:none;cursor:pointer;font-size:20px;opacity:0.7;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">🗑️</button>'
+  + '</div>'
   + '<textarea id="noteInput" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-height:60px;resize:vertical;">'+(r.decision_note||'')+'</textarea>'
   + '<button onclick="saveNote('+id+')" style="padding:8px;background:#06c755;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">💾 บันทึกหมายเหตุ</button>'
-  + '</div>'
-  + '<div style="margin-top:12px;text-align:center;">'
-  + '<button onclick="deleteSubmission('+id+')" title="ลบคำขอนี้" style="background:none;border:none;cursor:pointer;font-size:28px;opacity:0.75;transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.75">🗑️</button>'
-  + '<div style="font-size:10px;color:#e74c3c;margin-top:2px;">ลบคำขอนี้</div>'
   + '</div>';
 
   document.getElementById('detailTitle').textContent = (r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')';
