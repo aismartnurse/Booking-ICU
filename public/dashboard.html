@@ -8,6 +8,7 @@
   body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background:#f4f6f8; margin:0; color:#1a1a1a; }
   header { background:#06c755; color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
   header h1 { margin:0; font-size:20px; }
+  header .btns { display:flex; gap:8px; }
   main { max-width:1300px; margin:0 auto; padding:24px; }
   .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:10px; margin-bottom:24px; }
   .bed { border-radius:10px; padding:14px 8px; text-align:center; color:#fff; font-weight:700; cursor:pointer; }
@@ -17,7 +18,7 @@
   .bed.closed { background:#7f8c8d; }
   .bed small { display:block; font-weight:400; font-size:11px; margin-top:4px; }
   table { width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; }
-  th, td { padding:9px 10px; text-align:left; font-size:12px; border-bottom:1px solid #eee; }
+  th, td { padding:9px 10px; text-align:left; font-size:12px; border-bottom:1px solid #eee; vertical-align:middle; }
   th { background:#fafafa; font-weight:600; }
   .badge { padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
   .badge.pending { background:#fef5e7; color:#b9770e; }
@@ -32,24 +33,35 @@
   #loginBox { max-width:320px; margin:80px auto; background:#fff; padding:24px; border-radius:12px; box-shadow:0 1px 6px rgba(0,0,0,0.1); }
   #loginBox input { width:100%; padding:10px; margin:6px 0; border:1px solid #ddd; border-radius:8px; }
   #loginBox button { width:100%; padding:12px; background:#06c755; color:#fff; border:none; border-radius:8px; font-weight:700; margin-top:8px; cursor:pointer; }
-  select.role-select { padding:4px; border-radius:6px; }
-  .logout { background:none; border:1px solid #fff; color:#fff; padding:6px 14px; border-radius:6px; cursor:pointer; }
+  .hdr-btn { background:none; border:1px solid #fff; color:#fff; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:14px; }
   .link-btn { color:#06c755; cursor:pointer; font-weight:600; text-decoration:underline; background:none; border:none; font-size:12px; padding:0; }
-  .action-btn { padding:4px 10px; border:none; border-radius:6px; cursor:pointer; font-size:11px; font-weight:700; margin-right:3px; }
-  .approve-btn { background:#27ae60; color:#fff; }
-  .reject-btn { background:#e74c3c; color:#fff; }
   .tab-bar { display:flex; gap:4px; margin-bottom:12px; }
   .tab-btn { padding:7px 14px; border:none; border-radius:8px; cursor:pointer; font-size:12px; background:#eee; }
   .tab-btn.active { background:#06c755; color:#fff; font-weight:700; }
+
+  /* urgency dots */
+  .urg-dots { display:flex; gap:5px; align-items:center; cursor:pointer; }
+  .urg-dot { width:16px; height:16px; border-radius:50%; border:2px solid transparent; transition:transform 0.1s; }
+  .urg-dot:hover { transform:scale(1.2); }
+  .urg-dot.active { border-color:#333; }
+  .urg-dot.emergency { background:#e74c3c; }
+  .urg-dot.urgent { background:#f39c12; }
+  .urg-dot.normal { background:#27ae60; }
+
+  /* action dropdown */
+  .action-sel { padding:5px 8px; border-radius:6px; border:1px solid #ddd; font-size:12px; cursor:pointer; background:#fff; }
+
+  .adm-select { padding:4px 6px; border-radius:6px; border:1px solid #ddd; font-size:11px; cursor:pointer; }
+
+  /* modals */
   .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; }
   .modal-overlay.show { display:flex; }
-  .modal { background:#fff; border-radius:14px; padding:24px; max-width:500px; width:92%; max-height:80vh; overflow-y:auto; }
+  .modal { background:#fff; border-radius:14px; padding:24px; max-width:520px; width:92%; max-height:85vh; overflow-y:auto; }
   .modal h3 { margin:0 0 14px; font-size:16px; }
   .modal-row { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid #f0f0f0; font-size:13px; }
   .modal-row b { color:#555; min-width:140px; }
   .modal-close { width:100%; margin-top:14px; padding:10px; background:#f4f6f8; border:none; border-radius:8px; cursor:pointer; }
-  .urg-select { padding:3px 6px; border-radius:5px; border:1px solid #ddd; font-size:11px; cursor:pointer; }
-  .adm-select { padding:3px 6px; border-radius:5px; border:1px solid #ddd; font-size:11px; cursor:pointer; }
+  select.role-select { padding:4px; border-radius:6px; }
 </style>
 </head>
 <body>
@@ -65,14 +77,16 @@
 <div id="appBody" style="display:none;">
   <header>
     <h1>🏥 ICU Bed Dashboard</h1>
-    <button class="logout" id="logoutBtn">ออกจากระบบ</button>
+    <div class="btns">
+      <button class="hdr-btn" id="settingsBtn">⚙️ จัดการสิทธิ์</button>
+      <button class="hdr-btn" id="logoutBtn">ออกจากระบบ</button>
+    </div>
   </header>
   <main>
     <section>
       <h2>สถานะเตียง ICU (คลิกเพื่อเปลี่ยนสถานะ)</h2>
       <div class="grid" id="bedsGrid"></div>
     </section>
-
     <section>
       <h2>คำขอจองเตียง ICU</h2>
       <div class="tab-bar">
@@ -84,22 +98,27 @@
         <tbody id="subBody"></tbody>
       </table>
     </section>
-
-    <section>
-      <h2>จัดการสิทธิ์ผู้ใช้ LINE</h2>
-      <table>
-        <thead><tr><th>ชื่อ LINE</th><th>LINE userId</th><th>สิทธิ์</th><th>เปลี่ยนสิทธิ์</th></tr></thead>
-        <tbody id="usersBody"></tbody>
-      </table>
-    </section>
   </main>
 </div>
 
-<div class="modal-overlay" id="modal">
+<!-- modal รายละเอียด -->
+<div class="modal-overlay" id="detailModal">
   <div class="modal">
-    <h3 id="modalTitle"></h3>
-    <div id="modalBody"></div>
-    <button class="modal-close" id="modalClose">ปิด</button>
+    <h3 id="detailTitle"></h3>
+    <div id="detailBody"></div>
+    <button class="modal-close" onclick="document.getElementById('detailModal').classList.remove('show')">ปิด</button>
+  </div>
+</div>
+
+<!-- modal จัดการสิทธิ์ -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal" style="max-width:700px;">
+    <h3>⚙️ จัดการสิทธิ์ผู้ใช้ LINE</h3>
+    <table>
+      <thead><tr><th>ชื่อ LINE</th><th>LINE userId</th><th>สิทธิ์</th><th>เปลี่ยนสิทธิ์</th></tr></thead>
+      <tbody id="usersBody"></tbody>
+    </table>
+    <button class="modal-close" onclick="document.getElementById('settingsModal').classList.remove('show')">ปิด</button>
   </div>
 </div>
 
@@ -111,28 +130,23 @@ var bedStatusLabel = { available:'ว่าง', occupied:'มีผู้ป่
 var nextStatus = { available:'occupied', occupied:'cleaning', cleaning:'available', closed:'available' };
 var formTypeLabel = { or:'🔪 ICU for OR', crisis:'🚨 ICU Crisis' };
 var icuTypeLabel = { plan:'📋 Plan', unplan:'🚨 Unplan' };
-var urgLabel = { emergency:'🔴 เร่งด่วนมาก', urgent:'🟡 ปานกลาง', normal:'🟢 ปกติ' };
 var admLabel = { pending:'รอติดตาม', confirmed:'✅ เข้า ICU แน่ๆ', return_ward:'🔙 ย้ายกลับ ward' };
 var statusLabel = { pending:'รอดำเนินการ', approved:'อนุมัติแล้ว', rejected:'ปฏิเสธแล้ว' };
 var fieldLabels = { doctor:'แพทย์ผู้ผ่าตัด', surgery_name:'ชื่อการผ่าตัด', booking_date:'วันที่ต้องการจอง', system:'ระบบ', sbp:'SBP (mmHg.)', hr:'HR (bpm.)', rr:'RR (bpm.)', temp:'Temp (°C)', sos_score:'SOS score', conscious:'Conscious', urine:'ปริมาณปัสสาวะ/8hrs', reason:'เรื่องที่ต้องการจอง' };
 
 document.getElementById('loginBtn').onclick = async function() {
-  var un = document.getElementById('un').value;
-  var pw = document.getElementById('pw').value;
-  var res = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:un, password:pw}) });
-  if (res.ok) { showApp(); }
-  else { document.getElementById('loginErr').textContent = 'username หรือ password ไม่ถูกต้อง'; }
+  var res = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:document.getElementById('un').value, password:document.getElementById('pw').value}) });
+  if (res.ok) { showApp(); } else { document.getElementById('loginErr').textContent = 'username หรือ password ไม่ถูกต้อง'; }
 };
+document.getElementById('logoutBtn').onclick = async function() { await fetch('/api/admin/logout',{method:'POST'}); location.reload(); };
+document.getElementById('settingsBtn').onclick = function() { document.getElementById('settingsModal').classList.add('show'); };
+document.getElementById('tabPending').onclick = function() { currentTab='pending'; document.getElementById('tabPending').className='tab-btn active'; document.getElementById('tabAll').className='tab-btn'; renderSubs(); };
+document.getElementById('tabAll').onclick = function() { currentTab='all'; document.getElementById('tabAll').className='tab-btn active'; document.getElementById('tabPending').className='tab-btn'; renderSubs(); };
 
-document.getElementById('logoutBtn').onclick = async function() {
-  await fetch('/api/admin/logout', { method:'POST' });
-  location.reload();
-};
-
-document.getElementById('tabPending').onclick = function() { currentTab='pending'; this.className='tab-btn active'; document.getElementById('tabAll').className='tab-btn'; renderSubs(); };
-document.getElementById('tabAll').onclick = function() { currentTab='all'; this.className='tab-btn active'; document.getElementById('tabPending').className='tab-btn'; renderSubs(); };
-document.getElementById('modalClose').onclick = function() { document.getElementById('modal').classList.remove('show'); };
-document.getElementById('modal').onclick = function(e) { if(e.target===this) this.classList.remove('show'); };
+// ปิด modal เมื่อคลิกนอก
+['detailModal','settingsModal'].forEach(function(id) {
+  document.getElementById(id).onclick = function(e) { if(e.target===this) this.classList.remove('show'); };
+});
 
 async function checkAuth() {
   var r = await fetch('/api/admin/check').then(function(r){return r.json();});
@@ -140,8 +154,8 @@ async function checkAuth() {
 }
 
 function showApp() {
-  document.getElementById('loginBox').style.display = 'none';
-  document.getElementById('appBody').style.display = 'block';
+  document.getElementById('loginBox').style.display='none';
+  document.getElementById('appBody').style.display='block';
   loadAll();
   setInterval(loadAll, 10000);
 }
@@ -155,7 +169,7 @@ async function loadAll() {
     allSubs = subs;
     renderSubs();
     renderUsers(users);
-  } catch(e) { console.log('loadAll error:', e); }
+  } catch(e) { console.log('error:', e); }
 }
 
 function renderBeds(beds) {
@@ -167,75 +181,56 @@ function renderBeds(beds) {
 async function cycleBed(id, cur) {
   var next = nextStatus[cur];
   if (!confirm('เปลี่ยนสถานะเตียงเป็น "'+bedStatusLabel[next]+'" ?')) return;
-  await fetch('/api/admin/beds/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:next}) });
+  await fetch('/api/admin/beds/'+id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:next})});
   loadAll();
 }
 
 function renderSubs() {
-  var rows = currentTab === 'pending' ? allSubs.filter(function(r){return r.status==='pending';}) : allSubs;
+  var rows = currentTab==='pending' ? allSubs.filter(function(r){return r.status==='pending';}) : allSubs;
   if (!rows.length) {
-    document.getElementById('subBody').innerHTML = '<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;">ไม่มีรายการ</td></tr>';
+    document.getElementById('subBody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;">ไม่มีรายการ</td></tr>';
     return;
   }
   document.getElementById('subBody').innerHTML = rows.map(function(r) {
-    var urg = r.urgency || 'normal';
-    var adm = r.admission_status || 'pending';
-    var st = r.status || 'pending';
-    var actions = st === 'pending'
-      ? '<button class="action-btn approve-btn" onclick="decide('+r.id+',\'approved\')">✅ อนุมัติ</button><button class="action-btn reject-btn" onclick="decide('+r.id+',\'rejected\')">❌ ปฏิเสธ</button>'
+    var urg = r.urgency||'normal';
+    var adm = r.admission_status||'pending';
+    var st = r.status||'pending';
+
+    // urgency dots
+    var dots = ['emergency','urgent','normal'].map(function(u) {
+      return '<div class="urg-dot '+u+(urg===u?' active':'')+'" title="'+(u==='emergency'?'เร่งด่วนมาก':u==='urgent'?'ปานกลาง':'ปกติ')+'" onclick="updateUrg('+r.id+',\''+u+'\')"></div>';
+    }).join('');
+
+    // action dropdown
+    var actionSel = st==='pending'
+      ? '<select class="action-sel" onchange="handleAction('+r.id+',this)"><option value="">-- เลือก --</option><option value="approved">✅ อนุมัติ</option><option value="rejected">❌ ปฏิเสธ</option></select>'
       : '<span style="color:#aaa;font-size:11px;">ดำเนินการแล้ว</span>';
+
     return '<tr>'
       +'<td>#'+r.id+'</td>'
       +'<td><button class="link-btn" onclick="showDetail('+r.id+')">'+(r.patient_name||'-')+'</button><br><span style="font-size:10px;color:#888;">HN: '+(r.patient_hn||'-')+'</span></td>'
       +'<td>'+(r.ward||'-')+'</td>'
       +'<td><span class="badge '+(r.form_type||'')+'">'+(formTypeLabel[r.form_type]||r.form_type||'-')+'</span></td>'
       +'<td>'+(r.icu_type?'<span class="badge '+r.icu_type+'">'+icuTypeLabel[r.icu_type]+'</span>':'-')+'</td>'
-      +'<td><select class="urg-select" onchange="updateUrg('+r.id+',this.value)">'
-        +'<option value="emergency"'+(urg==='emergency'?' selected':'')+'>🔴 เร่งด่วนมาก</option>'
-        +'<option value="urgent"'+(urg==='urgent'?' selected':'')+'>🟡 ปานกลาง</option>'
-        +'<option value="normal"'+(urg==='normal'?' selected':'')+'>🟢 ปกติ</option>'
-      +'</select></td>'
+      +'<td><div class="urg-dots">'+dots+'</div></td>'
       +'<td><select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
         +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
         +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU แน่ๆ</option>'
         +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>🔙 ย้ายกลับ ward</option>'
       +'</select></td>'
       +'<td>'+new Date(r.submitted_at).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</td>'
-      +'<td><span class="badge '+(statusLabel[st]?st:'pending')+'">'+(statusLabel[st]||st)+'</span></td>'
-      +'<td>'+actions+'</td>'
+      +'<td><span class="badge '+st+'">'+(statusLabel[st]||st)+'</span></td>'
+      +'<td>'+actionSel+'</td>'
       +'</tr>';
   }).join('');
 }
 
-async function showDetail(id) {
-  var r = await fetch('/api/form-submissions/'+id).then(function(r){return r.json();});
-  var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
-  document.getElementById('modalTitle').textContent = (r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')';
-  var rows = [
-    ['ประเภท', formTypeLabel[r.form_type]||r.form_type||'-'],
-    ['ชื่อ-สกุล', r.patient_name||'-'],
-    ['HN', r.patient_hn||'-'],
-    ['หอผู้ป่วย', r.ward||'-'],
-    ['Diagnosis', r.diagnosis||'-'],
-    ['ICU Type', icuTypeLabel[r.icu_type]||'-'],
-    ['ความเร่งด่วน', urgLabel[r.urgency||'normal']||'-'],
-    ['สถานะเข้า ICU', admLabel[r.admission_status||'pending']||'-'],
-    ['สถานะ', statusLabel[r.status]||r.status||'-'],
-    ['เตียงที่จัดให้', r.assigned_bed||'-'],
-    ['หมายเหตุ', r.decision_note||'-'],
-  ];
-  Object.entries(extra).forEach(function(kv) { rows.push([fieldLabels[kv[0]]||kv[0], kv[1]||'-']); });
-  rows.push(['เวลาที่ส่ง', new Date(r.submitted_at).toLocaleString('th-TH')]);
-  document.getElementById('modalBody').innerHTML = rows.map(function(rv) {
-    return '<div class="modal-row"><b>'+rv[0]+'</b><span>'+rv[1]+'</span></div>';
-  }).join('');
-  document.getElementById('modal').classList.add('show');
-}
-
-async function decide(id, decision) {
-  var assignedBed = null;
-  var note = '';
-  if (decision === 'approved') {
+async function handleAction(id, sel) {
+  var decision = sel.value;
+  if (!decision) return;
+  sel.value = '';
+  var assignedBed=null, note='';
+  if (decision==='approved') {
     var beds = await fetch('/api/beds').then(function(r){return r.json();});
     var avail = beds.filter(function(b){return b.status==='available';});
     if (!avail.length) { alert('ไม่มีเตียงว่าง'); return; }
@@ -244,48 +239,73 @@ async function decide(id, decision) {
     var bed = avail.find(function(b){return b.label===assignedBed.trim();});
     if (!bed) { alert('ชื่อเตียงไม่ถูกต้อง'); return; }
     note = prompt('หมายเหตุ (ถ้ามี):') || '';
-    await fetch('/api/admin/beds/'+bed.id, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:'occupied'}) });
+    await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'occupied'})});
   } else {
-    note = prompt('ระบุเหตุผล:') || '';
+    note = prompt('ระบุเหตุผลที่ปฏิเสธ:') || '';
   }
-  await fetch('/api/form-submissions/'+id+'/decision', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({decision:decision, assignedBed:assignedBed, note:note}) });
+  await fetch('/api/form-submissions/'+id+'/decision', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({decision:decision,assignedBed:assignedBed,note:note})});
   loadAll();
 }
 
 async function updateUrg(id, val) {
-  await fetch('/api/form-submissions/'+id+'/urgency', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({urgency:val}) });
+  await fetch('/api/form-submissions/'+id+'/urgency', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({urgency:val})});
   loadAll();
 }
 
 async function updateAdm(id, val) {
-  await fetch('/api/form-submissions/'+id+'/admission', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({admissionStatus:val}) });
+  await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:val})});
   loadAll();
 }
 
+async function showDetail(id) {
+  var r = await fetch('/api/form-submissions/'+id).then(function(r){return r.json();});
+  var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
+  document.getElementById('detailTitle').textContent=(r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')';
+  var urgTxt = {emergency:'🔴 เร่งด่วนมาก', urgent:'🟡 ปานกลาง', normal:'🟢 ปกติ'};
+  var rows=[
+    ['ประเภท', formTypeLabel[r.form_type]||r.form_type||'-'],
+    ['ชื่อ-สกุล', r.patient_name||'-'],
+    ['HN', r.patient_hn||'-'],
+    ['หอผู้ป่วย', r.ward||'-'],
+    ['Diagnosis', r.diagnosis||'-'],
+    ['ICU Type', icuTypeLabel[r.icu_type]||'-'],
+    ['ความเร่งด่วน', urgTxt[r.urgency||'normal']||'-'],
+    ['สถานะเข้า ICU', admLabel[r.admission_status||'pending']||'-'],
+    ['สถานะ', statusLabel[r.status]||r.status||'-'],
+    ['เตียงที่จัดให้', r.assigned_bed||'-'],
+    ['หมายเหตุ', r.decision_note||'-'],
+  ];
+  Object.entries(extra).forEach(function(kv){ rows.push([fieldLabels[kv[0]]||kv[0], kv[1]||'-']); });
+  rows.push(['เวลาที่ส่ง', new Date(r.submitted_at).toLocaleString('th-TH')]);
+  document.getElementById('detailBody').innerHTML=rows.map(function(rv){
+    return '<div class="modal-row"><b>'+rv[0]+'</b><span>'+rv[1]+'</span></div>';
+  }).join('');
+  document.getElementById('detailModal').classList.add('show');
+}
+
 function renderUsers(rows) {
-  document.getElementById('usersBody').innerHTML = rows.map(function(u) {
+  document.getElementById('usersBody').innerHTML=rows.map(function(u){
     return '<tr>'
-      +'<td>'+(u.display_name||'-')+' <button onclick="editName('+u.id+',\''+((u.display_name||'').replace(/'/g,"\\'"))+'\')" style="margin-left:4px;padding:1px 6px;font-size:10px;border:1px solid #ccc;border-radius:4px;cursor:pointer;">✏️</button></td>'
+      +'<td>'+(u.display_name||'-')+' <button onclick="editName('+u.id+',\''+((u.display_name||'').replace(/'/g,"\\'"))+'\')" style="padding:1px 6px;font-size:10px;border:1px solid #ccc;border-radius:4px;cursor:pointer;margin-left:4px;">✏️</button></td>'
       +'<td style="font-size:10px;color:#888;">'+u.line_user_id+'</td>'
       +'<td>'+u.role+'</td>'
       +'<td><select class="role-select" onchange="changeRole('+u.id+',this.value)">'
         +'<option value="pending"'+(u.role==='pending'?' selected':'')+'>pending</option>'
         +'<option value="requester"'+(u.role==='requester'?' selected':'')+'>requester</option>'
         +'<option value="approver"'+(u.role==='approver'?' selected':'')+'>approver</option>'
-      +'</select></td>'
-      +'</tr>';
+      +'</select></td></tr>';
   }).join('');
 }
 
 async function editName(id, cur) {
-  var n = prompt('ใส่ชื่อใหม่:', cur);
+  var n=prompt('ใส่ชื่อใหม่:', cur);
   if (!n) return;
-  await fetch('/api/admin/users/'+id+'/name', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({displayName:n.trim()}) });
+  await fetch('/api/admin/users/'+id+'/name', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({displayName:n.trim()})});
   loadAll();
 }
 
 async function changeRole(id, role) {
-  await fetch('/api/admin/users/'+id+'/role', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role:role}) });
+  await fetch('/api/admin/users/'+id+'/role', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:role})});
   loadAll();
 }
 
