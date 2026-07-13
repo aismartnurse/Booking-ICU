@@ -206,6 +206,15 @@ router.post('/form-submissions/:id/decision', requireAdmin, async (req, res) => 
   res.json({ ok: true });
 });
 
+router.delete('/form-submissions/:id', requireAdmin, async (req, res) => {
+  try {
+    await db.run('DELETE FROM form_submissions WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.put('/form-submissions/:id/note', requireAdmin, async (req, res) => {
   const { note } = req.body;
   await db.run('UPDATE form_submissions SET decision_note=$1, updated_at=NOW() WHERE id=$2', [note||null, req.params.id]);
