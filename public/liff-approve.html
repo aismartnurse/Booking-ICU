@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>พิจารณาคำขอจองเตียง ICU</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background:#f4f6f8; margin:0; padding:16px; color:#1a1a1a; }
+  h1 { font-size:18px; margin-bottom:4px; }
+  .sub { color:#666; font-size:13px; margin-bottom:16px; }
+  .card { background:#fff; border-radius:12px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:12px; }
+  .row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f0f0f0; font-size:14px; }
+  .row b { color:#444; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+  .badge.emergency { background:#fdecea; color:#c0392b; }
+  .badge.urgent { background:#fef5e7; color:#b9770e; }
+  .badge.elective { background:#eafaf1; color:#1e8449; }
+  label { display:block; font-size:13px; font-weight:600; margin:10px 0 4px; }
+  select, textarea { width:100%; box-sizing:border-box; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
+  .btn-row { display:flex; gap:8px; margin-top:16px; }
+  button { flex:1; padding:14px; border:none; border-radius:10px; font-size:15px; font-weight:700; }
+  #approveBtn { background:#06c755; color:#fff; }
+  #waitingBtn { background:#f5a623; color:#fff; }
+  #rejectBtn { background:#e74c3c; color:#fff; }
+  button:disabled { background:#ccc; }
+  #notAllowed, #alreadyDone { display:none; }
+</style>
+</head>
+<body>
+
+<div id="loading" style="text-align:center;padding:40px;">กำลังโหลด...</div>
+
+<div id="notAllowed">
+  <div class="card" style="text-align:center;">
+    <h1>🚫 ไม่มีสิทธิ์เข้าถึงหน้านี้</h1>
+    <p class="sub">หน้านี้สำหรับเจ้าหน้าที่ ICU ที่ได้รับสิทธิ์ approver เท่านั้น</p>
+  </div>
+</div>
+
+<div id="alreadyDone">
+  <div class="card" style="text-align:center;">
+    <h1>ℹ️ คำขอนี้ถูกดำเนินการแล้ว</h1>
+  </div>
+</div>
+
+<div id="content" style="display:none;">
+  <h1>📋 พิจารณาคำขอจองเตียง ICU</h1>
+  <div class="card" id="detailCard"></div>
+
+  <div class="card">
+    <label>เลือกเตียงที่จะจัดให้ (กรณีอนุมัติ)</label>
+    <select id="bedSelect"></select>
+
+    <div class="icu-type-group">
+      <input type="radio" name="icuType" id="icuPlan" value="plan" />
+      <label class="icu-btn" for="icuPlan">📋 ICU Plan</label>
+      <input type="radio" name="icuType" id="icuUnplan" value="unplan" />
+      <label class="icu-btn" for="icuUnplan">🚨 ICU Unplan</label>
+    </div>
+
+    <label>หมายเหตุ (ถ้ามี)</label>
+    <textarea id="note" placeholder="เหตุผล/รายละเอียดเพิ่มเติม"></textarea>
+
+    <div class="btn-row">
+      <button id="approveBtn">✅ อนุมัติ</button>
+      <button id="waitingBtn">⏳ Waiting</button>
+      <button id="rejectBtn">❌ ปฏิเสธ</button>
+    </div>
+  </div>
+</div>
+
+<div id="resultMsg" style="display:none;"></div>
+
+<script>
+const LIFF_ID = "%LIFF_ID_APPROVE%"; // แก้เป็น LIFF ID จริงตอน deploy
+const params = new URLSearchParams(location.search);
+const requestId = params.get('requestId');
+
+const urgencyLabel = { emergency: '🔴 ฉุกเฉินมาก', urgent: '🟠 ด่วน', elective: '🟢 ไม่เร่งด่วน' };
+const statusLabel = { pending: 'รอดำเนินการ', approved: 'อนุมัติแล้ว', rejected: 'ปฏิเสธแล้ว', waiting: 'Waiting list' };
+
+let myProfile = null;
+
+async function main() {
+  if (!requestId) {
+    document.getElementById('loading').textContent = 'ไม่พบหมายเลขคำขอ (requestId)';
+    return;
+  }
+
+  await liff.init({ liffId: LIFF_ID });
+  if (!liff.isLoggedIn()) { liff.login(); return; }
+
+  myProfile = await liff.getProfile();
+  const reg = await fetch('/api/users/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lineUserId: myProfile.userId, displayName: myProfile.displayName })
+  }).then(r => r.json());
+
+  document.getElementById('loading').style.display = 'none';
+
+  if (reg.role !== 'approver') {
+    document.getElementById('notAllowed').style.display = 'block';
+    return;
+  }
+
+  const [reqData, beds] = await Promise.all([
+    fetch('/api/requests/' + requestId).then(r => r.json()),
+    fetch('/api/beds').then(r => r.json())
+  ]);
+
+  if (reqData.status !== 'pending') {
+    document.getElementById('alreadyDone').style.display = 'block';
+    renderDetail(reqData, true);
+    return;
+  }
+
+  renderDetail(reqData, false);
+
+  const select = document.getElementById('bedSelect');
+  const availableBeds = beds.filter(b => b.status === 'available');
+  if (availableBeds.length === 0) {
+    select.innerHTML = '<option value="">-- ไม่มีเตียงว่าง --</option>';
+  } else {
+    select.innerHTML = availableBeds.map(b => `<option value="${b.id}">${b.label}</option>`).join('');
+  }
+
+  document.getElementById('content').style.display = 'block';
+
+  document.getElementById('approveBtn').addEventListener('click', () => submit('approved'));
+  document.getElementById('waitingBtn').addEventListener('click', () => submit('waiting'));
+  document.getElementById('rejectBtn').addEventListener('click', () => submit('rejected'));
+}
+
+function renderDetail(r, readonly) {
+  document.getElementById('detailCard').innerHTML = `
+    <div class="row"><span>หมายเลขคำขอ</span><b>#${r.id}</b></div>
+    <div class="row"><span>ผู้ป่วย</span><b>${r.patient_name} (HN: ${r.patient_hn})</b></div>
+    <div class="row"><span>หอผู้ป่วยต้นทาง</span><b>${r.ward}</b></div>
+    <div class="row"><span>การวินิจฉัย</span><b>${r.diagnosis || '-'}</b></div>
+    <div class="row"><span>ความเร่งด่วน</span><span class="badge ${r.urgency}">${urgencyLabel[r.urgency]}</span></div>
+    <div class="row"><span>ผู้ขอ</span><b>${r.requester_name || '-'}</b></div>
+    <div class="row"><span>เบอร์ติดต่อ</span><b>${r.contact_phone || '-'}</b></div>
+    <div class="row"><span>สถานะ</span><b>${statusLabel[r.status]}</b></div>
+  `;
+}
+
+async function submit(decision) {
+  const bedId = document.getElementById('bedSelect').value;
+  const note = document.getElementById('note').value;
+
+  if (decision === 'approved' && !bedId) {
+    alert('กรุณาเลือกเตียงก่อนอนุมัติ');
+    return;
+  }
+
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+
+  const res = await fetch(`/api/requests/${requestId}/decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision, bedId: bedId || null, note, approverLineId: myProfile.userId })
+  });
+
+  document.getElementById('content').style.display = 'none';
+  const resultDiv = document.getElementById('resultMsg');
+  resultDiv.style.display = 'block';
+
+  if (res.ok) {
+    resultDiv.innerHTML = `<div class="card" style="text-align:center;"><h1>บันทึกผลเรียบร้อย</h1><p class="sub">ระบบได้แจ้งผลไปยังผู้ขอแล้ว</p></div>`;
+    setTimeout(() => liff.closeWindow(), 2500);
+  } else {
+    const err = await res.json();
+    resultDiv.innerHTML = `<div class="card" style="text-align:center;"><h1>❌ เกิดข้อผิดพลาด</h1><p class="sub">${err.error || ''}</p></div>`;
+  }
+}
+
+main().catch(err => {
+  document.getElementById('loading').textContent = 'เกิดข้อผิดพลาดในการโหลด: ' + err.message;
+});
+</script>
+</body>
+</html>

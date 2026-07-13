@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="refresh" content="30" /> <!-- รีเฟรชอัตโนมัติทุก 30 วินาที -->
+<title>สถานะเตียง ICU</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #f0f4f8; color: #1a1a1a; }
+
+  header {
+    background: linear-gradient(135deg, #1a6b3c, #06c755);
+    color: #fff;
+    padding: 20px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  header h1 { font-size: 22px; font-weight: 700; }
+  header .subtitle { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+  .clock { text-align: right; }
+  .clock .time { font-size: 28px; font-weight: 700; letter-spacing: 1px; }
+  .clock .date { font-size: 12px; opacity: 0.85; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+  /* สรุปตัวเลข */
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+  .summary-card { background: #fff; border-radius: 14px; padding: 18px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .summary-card .num { font-size: 42px; font-weight: 800; line-height: 1; }
+  .summary-card .label { font-size: 13px; color: #666; margin-top: 6px; }
+  .summary-card.available .num { color: #27ae60; }
+  .summary-card.occupied .num { color: #e74c3c; }
+  .summary-card.cleaning .num  { color: #f39c12; }
+  .summary-card.total .num { color: #2c3e50; }
+
+  /* กริดเตียง */
+  section { margin-bottom: 32px; }
+  section h2 { font-size: 16px; font-weight: 700; margin-bottom: 14px; color: #2c3e50; border-left: 4px solid #06c755; padding-left: 10px; }
+  .beds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+  .bed-card {
+    border-radius: 12px; padding: 16px 10px; text-align: center;
+    font-weight: 700; font-size: 18px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: transform 0.1s;
+  }
+  .bed-card small { display: block; font-size: 12px; font-weight: 500; margin-top: 6px; }
+  .bed-card.available { background: #d5f5e3; color: #1e8449; border: 2px solid #27ae60; }
+  .bed-card.occupied  { background: #fadbd8; color: #c0392b; border: 2px solid #e74c3c; }
+  .bed-card.cleaning  { background: #fef9e7; color: #b7770d; border: 2px solid #f39c12; }
+  .bed-card.closed    { background: #eaecee; color: #717d7e; border: 2px solid #aab7b8; }
+
+  /* legend */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; }
+  .dot.available { background: #27ae60; }
+  .dot.occupied  { background: #e74c3c; }
+  .dot.cleaning  { background: #f39c12; }
+  .dot.closed    { background: #aab7b8; }
+
+  /* ตารางคำขอ */
+  .table-wrap { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8f9fa; padding: 11px 14px; font-size: 13px; text-align: left; color: #555; border-bottom: 2px solid #eee; }
+  td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge.emergency { background: #fadbd8; color: #c0392b; }
+  .badge.urgent    { background: #fef9e7; color: #b7770d; }
+  .badge.elective  { background: #d5f5e3; color: #1e8449; }
+  .badge.pending   { background: #fef9e7; color: #b7770d; }
+  .badge.approved  { background: #d5f5e3; color: #1e8449; }
+  .badge.waiting   { background: #d6eaf8; color: #1a5276; }
+  .empty { text-align: center; color: #aaa; padding: 24px; }
+
+  .refresh-note { text-align: center; font-size: 12px; color: #aaa; margin-top: 20px; padding-bottom: 20px; }
+
+  @media (max-width: 600px) {
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    header { flex-direction: column; gap: 8px; align-items: flex-start; }
+    .clock { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🏥 สถานะเตียง ICU</h1>
+    <div class="subtitle">ข้อมูล real-time สำหรับบุคลากรทุกแผนก</div>
+  </div>
+  <div class="clock">
+    <div class="time" id="clock">--:--:--</div>
+    <div class="date" id="dateStr"></div>
+  </div>
+</header>
+
+<main>
+  <!-- สรุปตัวเลข -->
+  <div class="summary">
+    <div class="summary-card available"><div class="num" id="numAvailable">-</div><div class="label">เตียงว่าง</div></div>
+    <div class="summary-card occupied"><div class="num" id="numOccupied">-</div><div class="label">มีผู้ป่วย</div></div>
+    <div class="summary-card cleaning"><div class="num" id="numCleaning">-</div><div class="label">ทำความสะอาด</div></div>
+    <div class="summary-card total"><div class="num" id="numTotal">-</div><div class="label">เตียงทั้งหมด</div></div>
+  </div>
+
+  <!-- กริดเตียง -->
+  <section>
+    <h2>สถานะเตียงแต่ละเตียง</h2>
+    <div class="legend">
+      <div class="legend-item"><div class="dot available"></div> ว่าง</div>
+      <div class="legend-item"><div class="dot occupied"></div> มีผู้ป่วย</div>
+      <div class="legend-item"><div class="dot cleaning"></div> ทำความสะอาด</div>
+      <div class="legend-item"><div class="dot closed"></div> ปิดใช้งาน</div>
+    </div>
+    <div class="beds-grid" id="bedsGrid">กำลังโหลด...</div>
+  </section>
+
+  <!-- คำขอที่รอดำเนินการ -->
+  <section>
+    <h2>คำขอที่รอดำเนินการ</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>ผู้ป่วย</th><th>หอผู้ป่วยต้นทาง</th><th>ความเร่งด่วน</th><th>เวลาที่ขอ</th><th>สถานะ</th></tr>
+        </thead>
+        <tbody id="pendingBody"><tr><td colspan="5" class="empty">กำลังโหลด...</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<div class="refresh-note">🔄 หน้านี้รีเฟรชอัตโนมัติทุก 30 วินาที</div>
+
+<script>
+const bedStatusLabel = { available: 'ว่าง', occupied: 'มีผู้ป่วย', cleaning: 'ทำความสะอาด', closed: 'ปิดใช้งาน' };
+
+const urgencyLabel = { emergency: '🔴 ฉุกเฉินมาก', urgent: '🟠 ด่วน', elective: '🟢 ไม่เร่งด่วน' };
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('th-TH');
+  document.getElementById('dateStr').textContent = now.toLocaleDateString('th-TH', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// โหลดข้อมูล
+async function loadData() {
+  try {
+    const [beds, pending] = await Promise.all([
+      fetch('/api/beds').then(r => r.json()),
+      fetch('/api/requests?status=pending').then(r => r.json()),
+    ]);
+
+    // สรุปตัวเลข
+    const counts = { available: 0, occupied: 0, cleaning: 0, closed: 0 };
+    beds.forEach(b => { if (counts[b.status] !== undefined) counts[b.status]++; });
+    document.getElementById('numAvailable').textContent = counts.available;
+    document.getElementById('numOccupied').textContent = counts.occupied;
+    document.getElementById('numCleaning').textContent = counts.cleaning;
+    document.getElementById('numTotal').textContent = beds.length;
+
+    // กริดเตียง
+    document.getElementById('bedsGrid').innerHTML = beds.map(b => `
+      <div class="bed-card ${b.status}">
+        ${b.label}
+        <small>${bedStatusLabel[b.status]}</small>
+      </div>
+    `).join('');
+
+    document.getElementById('pendingBody').innerHTML = pending.length
+      ? pending.map(r => `
+          <tr>
+            <td>#${r.id}</td>
+            <td><b>${r.patient_name}</b><br><span style="font-size:11px;color:#888;">HN: ${r.patient_hn}</span></td>
+            <td>${r.ward}</td>
+            <td><span class="badge ${r.urgency}">${urgencyLabel[r.urgency]}</span></td>
+            <td>${new Date(r.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td>
+            <td><span class="badge pending">⏳ รอดำเนินการ</span></td>
+          </tr>
+        `).join('')
+      : '<tr><td colspan="6" class="empty">✅ ไม่มีคำขอค้างอยู่ในขณะนี้</td></tr>';
+
+  } catch (e) {
+    document.getElementById('bedsGrid').textContent = 'ไม่สามารถโหลดข้อมูลได้ กรุณารีเฟรชหน้า';
+  }
+}
+
+loadData();
+setInterval(loadData, 10000); // โหลดข้อมูลใหม่ทุก 10 วินาที (แยกจาก meta refresh)
+</script>
+</body>
+</html>

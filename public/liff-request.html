@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>ขอจองเตียง ICU</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background:#f4f6f8; margin:0; padding:16px; color:#1a1a1a; }
+  h1 { font-size:18px; margin-bottom:4px; }
+  .sub { color:#666; font-size:13px; margin-bottom:16px; }
+  .card { background:#fff; border-radius:12px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:12px; }
+  label { display:block; font-size:13px; font-weight:600; margin:10px 0 4px; }
+  input, select, textarea { width:100%; box-sizing:border-box; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
+  textarea { resize:vertical; min-height:60px; }
+  .urgency-group { display:flex; gap:8px; }
+  .urgency-group label { flex:1; text-align:center; border:1px solid #ddd; border-radius:8px; padding:10px 0; cursor:pointer; font-weight:500; margin:0; }
+  .urgency-group input { display:none; }
+  .urgency-group input:checked + span { font-weight:700; }
+  .urgency-group label.emergency { background:#fdecea; color:#c0392b; }
+  .urgency-group label.urgent { background:#fef5e7; color:#b9770e; }
+  .urgency-group label.elective { background:#eafaf1; color:#1e8449; }
+  button { width:100%; padding:14px; background:#06c755; color:#fff; border:none; border-radius:10px; font-size:16px; font-weight:700; margin-top:16px; }
+  button:disabled { background:#ccc; }
+  #status { text-align:center; padding:40px 16px; }
+  #notAllowed { display:none; }
+</style>
+</head>
+<body>
+
+<div id="loading" style="text-align:center;padding:40px;">กำลังโหลด...</div>
+
+<div id="notAllowed">
+  <div class="card" style="text-align:center;">
+    <h1>⏳ บัญชีของท่านยังไม่ได้รับสิทธิ์</h1>
+    <p class="sub">กรุณาติดต่อแผนก ICU เพื่อยืนยันตัวตนและขอสิทธิ์การใช้งานก่อน</p>
+  </div>
+</div>
+
+<form id="form" style="display:none;">
+  <h1>🛏️ แบบฟอร์มขอจองเตียง ICU</h1>
+  <div class="sub">กรอกข้อมูลให้ครบถ้วน ระบบจะแจ้งเตือนเจ้าหน้าที่ ICU ทันที</div>
+
+  <div class="card">
+    <label>HN ผู้ป่วย *</label>
+    <input type="text" id="patientHn" required />
+
+    <label>ชื่อ-สกุลผู้ป่วย *</label>
+    <input type="text" id="patientName" required />
+
+    <label>หอผู้ป่วยต้นทาง *</label>
+    <input type="text" id="ward" required placeholder="เช่น หอผู้ป่วยอายุรกรรมชาย" />
+
+    <label>การวินิจฉัย / เหตุผลที่ต้องเข้า ICU</label>
+    <textarea id="diagnosis" placeholder="สรุปอาการ/เหตุผลโดยย่อ"></textarea>
+
+    <label>ความเร่งด่วน *</label>
+    <div class="urgency-group">
+      <label class="emergency"><input type="radio" name="urgency" value="emergency" /><span>🔴 ฉุกเฉินมาก</span></label>
+      <label class="urgent"><input type="radio" name="urgency" value="urgent" checked /><span>🟠 ด่วน</span></label>
+      <label class="elective"><input type="radio" name="urgency" value="elective" /><span>🟢 ไม่เร่งด่วน</span></label>
+    </div>
+
+    <label>เบอร์ติดต่อกลับ</label>
+    <input type="tel" id="contactPhone" placeholder="เบอร์ที่ติดต่อได้สะดวก" />
+  </div>
+
+  <button type="submit" id="submitBtn">ส่งคำขอจองเตียง</button>
+</form>
+
+<div id="status" style="display:none;"></div>
+
+<script>
+const LIFF_ID = "%LIFF_ID_REQUEST%"; // จะถูกแทนค่าตอน deploy หรือแก้ตรงนี้ตรงๆ ก็ได้
+
+async function main() {
+  await liff.init({ liffId: LIFF_ID });
+  if (!liff.isLoggedIn()) { liff.login(); return; }
+
+  const profile = await liff.getProfile();
+  const reg = await fetch('/api/users/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lineUserId: profile.userId, displayName: profile.displayName })
+  }).then(r => r.json());
+
+  document.getElementById('loading').style.display = 'none';
+
+  if (reg.role === 'pending') {
+    document.getElementById('notAllowed').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('form').style.display = 'block';
+
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'กำลังส่ง...';
+
+    const payload = {
+      patientHn: document.getElementById('patientHn').value,
+      patientName: document.getElementById('patientName').value,
+      ward: document.getElementById('ward').value,
+      diagnosis: document.getElementById('diagnosis').value,
+      urgency: document.querySelector('input[name="urgency"]:checked').value,
+      contactPhone: document.getElementById('contactPhone').value,
+      requesterLineId: profile.userId,
+      requesterName: profile.displayName,
+    };
+
+    const res = await fetch('/api/requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    document.getElementById('form').style.display = 'none';
+    const statusDiv = document.getElementById('status');
+    statusDiv.style.display = 'block';
+
+    if (res.ok) {
+      const data = await res.json();
+      statusDiv.innerHTML = `<div class="card"><h1>✅ ส่งคำขอสำเร็จ</h1><p class="sub">หมายเลขคำขอ #${data.id} เจ้าหน้าที่ ICU จะได้รับแจ้งเตือนทันทีและจะติดต่อกลับโดยเร็วที่สุด</p></div>`;
+      setTimeout(() => liff.closeWindow(), 3000);
+    } else {
+      statusDiv.innerHTML = `<div class="card"><h1>❌ เกิดข้อผิดพลาด</h1><p class="sub">กรุณาลองใหม่อีกครั้ง หรือติดต่อแผนก ICU โดยตรง</p></div>`;
+    }
+  });
+}
+
+main().catch(err => {
+  document.getElementById('loading').textContent = 'เกิดข้อผิดพลาดในการโหลด: ' + err.message;
+});
+</script>
+</body>
+</html>
