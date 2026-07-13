@@ -39,14 +39,12 @@
   .tab-btn { padding:7px 14px; border:none; border-radius:8px; cursor:pointer; font-size:12px; background:#eee; }
   .tab-btn.active { background:#06c755; color:#fff; font-weight:700; }
 
-  /* urgency dots */
-  .urg-dots { display:flex; gap:5px; align-items:center; cursor:pointer; }
-  .urg-dot { width:16px; height:16px; border-radius:50%; border:2px solid transparent; transition:transform 0.1s; }
-  .urg-dot:hover { transform:scale(1.2); }
-  .urg-dot.active { border-color:#333; }
-  .urg-dot.emergency { background:#e74c3c; }
-  .urg-dot.urgent { background:#f39c12; }
-  .urg-dot.normal { background:#27ae60; }
+  /* urgency single button */
+  .urg-btn { width:28px; height:28px; border-radius:50%; border:2px solid rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.1s; }
+  .urg-btn:hover { transform:scale(1.15); }
+  .urg-btn.emergency { background:#e74c3c; }
+  .urg-btn.urgent { background:#f39c12; }
+  .urg-btn.normal { background:#27ae60; }
 
   /* action dropdown */
   .action-sel { padding:5px 8px; border-radius:6px; border:1px solid #ddd; font-size:12px; cursor:pointer; background:#fff; }
@@ -196,10 +194,10 @@ function renderSubs() {
     var adm = r.admission_status||'pending';
     var st = r.status||'pending';
 
-    // urgency dots
-    var dots = ['emergency','urgent','normal'].map(function(u) {
-      return '<div class="urg-dot '+u+(urg===u?' active':'')+'" title="'+(u==='emergency'?'เร่งด่วนมาก':u==='urgent'?'ปานกลาง':'ปกติ')+'" onclick="updateUrg('+r.id+',\''+u+'\')"></div>';
-    }).join('');
+    // urgency single button วนสี
+    var urgNext = {normal:'urgent', urgent:'emergency', emergency:'normal'};
+    var urgTip = {normal:'ปกติ → คลิกเปลี่ยน', urgent:'ปานกลาง → คลิกเปลี่ยน', emergency:'เร่งด่วนมาก → คลิกเปลี่ยน'};
+    var dot = '<button class="urg-btn '+urg+'" title="'+urgTip[urg]+'" onclick="updateUrg('+r.id+',\''+urgNext[urg]+'\')"></button>';
 
     // action dropdown
     var actionSel = st==='pending'
@@ -212,7 +210,7 @@ function renderSubs() {
       +'<td>'+(r.ward||'-')+'</td>'
       +'<td><span class="badge '+(r.form_type||'')+'">'+(formTypeLabel[r.form_type]||r.form_type||'-')+'</span></td>'
       +'<td>'+(r.icu_type?'<span class="badge '+r.icu_type+'">'+icuTypeLabel[r.icu_type]+'</span>':'-')+'</td>'
-      +'<td><div class="urg-dots">'+dots+'</div></td>'
+      +'<td>'+dot+'</td>'
       +'<td><select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
         +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
         +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU แน่ๆ</option>'
