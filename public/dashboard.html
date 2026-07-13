@@ -96,7 +96,7 @@
         </div>
       </div>
       <table>
-        <thead><tr><th>วันที่ส่งคำขอ</th><th>#</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>วันที่ต้องการใช้เตียง</th><th>ความเร่งด่วน</th><th>สถานะ / ดำเนินการ</th><th>สถานะเข้า ICU</th><th>ICU Type</th></tr></thead>
+        <thead><tr><th>วันที่ส่งคำขอ</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>วันที่ต้องการใช้เตียง</th><th>ความเร่งด่วน</th><th>สถานะ / ดำเนินการ</th><th>สถานะเข้า ICU</th><th>ICU Type</th></tr></thead>
         <tbody id="subBody"></tbody>
       </table>
     </section>
@@ -272,7 +272,6 @@ function renderSubs() {
 
     return '<tr>'
       +'<td style="font-size:11px;color:#555;">'+sentDate+'</td>'
-      +'<td>#'+r.id+'</td>'
       +'<td><button class="link-btn" onclick="showDetail('+r.id+')">'+(r.patient_name||'-')+'</button><br><span style="font-size:10px;color:#888;">HN: '+(r.patient_hn||'-')+'</span></td>'
       +'<td>'+(r.ward||'-')+'</td>'
       +'<td><span class="badge '+(r.form_type||'')+'">'+(formTypeLabel[r.form_type]||r.form_type||'-')+'</span></td>'
