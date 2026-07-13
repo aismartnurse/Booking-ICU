@@ -327,7 +327,7 @@ async function showDetail(id) {
   + '<div class="modal-row" style="flex-direction:column;gap:6px;">'
   + '<div style="display:flex;justify-content:space-between;align-items:center;">'
   + '<b>หมายเหตุ</b>'
-  + '<button onclick="deleteSubmission('+id+')" title="ลบคำขอนี้" style="background:none;border:none;cursor:pointer;font-size:20px;opacity:0.7;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">🗑️</button>'
+  + '<button onclick="deleteSubmission('+id+')" title="ลบคำขอนี้" style="background:none;border:none;cursor:pointer;font-size:20px;opacity:0.8;filter:sepia(1) saturate(5) hue-rotate(315deg);" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">🗑️</button>'
   + '</div>'
   + '<textarea id="noteInput" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-height:60px;resize:vertical;">'+(r.decision_note||'')+'</textarea>'
   + '<button onclick="saveNote('+id+')" style="padding:8px;background:#06c755;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">💾 บันทึกหมายเหตุ</button>'
@@ -342,8 +342,18 @@ async function deleteSubmission(id) {
   if (pw === null) return;
   if (pw !== '1234') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
   if (!confirm('ยืนยันลบคำขอ #'+id+' ?')) return;
-  await fetch('/api/form-submissions/'+id, { method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:'1234'}) });
-  loadAll();
+  var res = await fetch('/api/form-submissions/'+id, {
+    method:'DELETE',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({password:'1234'})
+  });
+  if (res.ok) {
+    document.getElementById('detailModal').classList.remove('show');
+    await loadAll();
+    alert('ลบเรียบร้อยแล้ว');
+  } else {
+    alert('เกิดข้อผิดพลาด ลองใหม่อีกครั้ง');
+  }
 }
 
 async function saveNote(id) {
