@@ -8,7 +8,7 @@
   body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background:#f4f6f8; margin:0; color:#1a1a1a; }
   header { background:#06c755; color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
   header h1 { margin:0; font-size:20px; }
-  main { max-width:1200px; margin:0 auto; padding:24px; }
+  main { max-width:1300px; margin:0 auto; padding:24px; }
   .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:10px; margin-bottom:24px; }
   .bed { border-radius:10px; padding:14px 8px; text-align:center; color:#fff; font-weight:700; cursor:pointer; }
   .bed.available { background:#27ae60; }
@@ -17,63 +17,55 @@
   .bed.closed { background:#7f8c8d; }
   .bed small { display:block; font-weight:400; font-size:11px; margin-top:4px; }
   table { width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; }
-  th, td { padding:10px 12px; text-align:left; font-size:13px; border-bottom:1px solid #eee; }
+  th, td { padding:9px 10px; text-align:left; font-size:12px; border-bottom:1px solid #eee; }
   th { background:#fafafa; font-weight:600; }
-  .badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+  .badge { padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
   .badge.pending { background:#fef5e7; color:#b9770e; }
   .badge.approved { background:#eafaf1; color:#1e8449; }
   .badge.rejected { background:#fdecea; color:#c0392b; }
-  .badge.waiting { background:#eaf2fb; color:#2874a6; }
   .badge.plan { background:#eaf2fb; color:#1a5276; }
   .badge.unplan { background:#fdecea; color:#c0392b; }
   .badge.or { background:#f5eef8; color:#7d3c98; }
   .badge.crisis { background:#fdecea; color:#c0392b; }
-  .urgency-dot { display:inline-block; width:14px; height:14px; border-radius:50%; cursor:pointer; border:2px solid rgba(0,0,0,0.1); vertical-align:middle; }
-  .urgency-dot.emergency { background:#e74c3c; }
-  .urgency-dot.urgent { background:#f39c12; }
-  .urgency-dot.normal { background:#27ae60; }
-  .urgency-picker { display:flex; gap:6px; align-items:center; }
-  .admission-select { padding:4px 6px; border-radius:6px; border:1px solid #ddd; font-size:12px; cursor:pointer; }
-  .admission-select.confirmed { background:#eafaf1; color:#1e8449; font-weight:700; }
-  .admission-select.return_ward { background:#fdecea; color:#c0392b; font-weight:700; }
-  .admission-select.pending { background:#fef5e7; color:#b9770e; }
   section { margin-bottom:32px; }
-  h2 { font-size:16px; border-left:4px solid #06c755; padding-left:10px; }
+  h2 { font-size:15px; border-left:4px solid #06c755; padding-left:10px; }
   #loginBox { max-width:320px; margin:80px auto; background:#fff; padding:24px; border-radius:12px; box-shadow:0 1px 6px rgba(0,0,0,0.1); }
-  #loginBox input { width:100%; box-sizing:border-box; padding:10px; margin:6px 0; border:1px solid #ddd; border-radius:8px; }
-  #loginBox button { width:100%; padding:12px; background:#06c755; color:#fff; border:none; border-radius:8px; font-weight:700; margin-top:8px; }
+  #loginBox input { width:100%; padding:10px; margin:6px 0; border:1px solid #ddd; border-radius:8px; }
+  #loginBox button { width:100%; padding:12px; background:#06c755; color:#fff; border:none; border-radius:8px; font-weight:700; margin-top:8px; cursor:pointer; }
   select.role-select { padding:4px; border-radius:6px; }
   .logout { background:none; border:1px solid #fff; color:#fff; padding:6px 14px; border-radius:6px; cursor:pointer; }
-  .link-btn { color:#06c755; cursor:pointer; font-weight:600; text-decoration:underline; background:none; border:none; font-size:13px; padding:0; }
-
-  /* Modal */
+  .link-btn { color:#06c755; cursor:pointer; font-weight:600; text-decoration:underline; background:none; border:none; font-size:12px; padding:0; }
+  .action-btn { padding:4px 10px; border:none; border-radius:6px; cursor:pointer; font-size:11px; font-weight:700; margin-right:3px; }
+  .approve-btn { background:#27ae60; color:#fff; }
+  .reject-btn { background:#e74c3c; color:#fff; }
+  .tab-bar { display:flex; gap:4px; margin-bottom:12px; }
+  .tab-btn { padding:7px 14px; border:none; border-radius:8px; cursor:pointer; font-size:12px; background:#eee; }
+  .tab-btn.active { background:#06c755; color:#fff; font-weight:700; }
   .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; }
   .modal-overlay.show { display:flex; }
-  .modal { background:#fff; border-radius:14px; padding:24px; max-width:520px; width:90%; max-height:80vh; overflow-y:auto; }
-  .modal h3 { margin:0 0 16px; font-size:17px; }
-  .modal-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f0f0f0; font-size:13px; }
-  .modal-row:last-child { border-bottom:none; }
+  .modal { background:#fff; border-radius:14px; padding:24px; max-width:500px; width:92%; max-height:80vh; overflow-y:auto; }
+  .modal h3 { margin:0 0 14px; font-size:16px; }
+  .modal-row { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid #f0f0f0; font-size:13px; }
   .modal-row b { color:#555; min-width:140px; }
-  .modal-close { width:100%; margin-top:16px; padding:10px; background:#f4f6f8; border:none; border-radius:8px; cursor:pointer; font-size:14px; }
-  .tab-bar { display:flex; gap:4px; margin-bottom:16px; }
-  .tab-btn { padding:8px 16px; border:none; border-radius:8px; cursor:pointer; font-size:13px; background:#eee; }
-  .tab-btn.active { background:#06c755; color:#fff; font-weight:700; }
+  .modal-close { width:100%; margin-top:14px; padding:10px; background:#f4f6f8; border:none; border-radius:8px; cursor:pointer; }
+  .urg-select { padding:3px 6px; border-radius:5px; border:1px solid #ddd; font-size:11px; cursor:pointer; }
+  .adm-select { padding:3px 6px; border-radius:5px; border:1px solid #ddd; font-size:11px; cursor:pointer; }
 </style>
 </head>
 <body>
 
 <div id="loginBox">
   <h2>เข้าสู่ระบบผู้ดูแล</h2>
-  <input id="username" placeholder="Username" />
-  <input id="password" type="password" placeholder="Password" />
-  <button onclick="login()">เข้าสู่ระบบ</button>
+  <input id="un" placeholder="Username" />
+  <input id="pw" type="password" placeholder="Password" />
+  <button id="loginBtn">เข้าสู่ระบบ</button>
   <div id="loginErr" style="color:red;font-size:13px;margin-top:8px;"></div>
 </div>
 
 <div id="appBody" style="display:none;">
   <header>
     <h1>🏥 ICU Bed Dashboard</h1>
-    <button class="logout" onclick="logout()">ออกจากระบบ</button>
+    <button class="logout" id="logoutBtn">ออกจากระบบ</button>
   </header>
   <main>
     <section>
@@ -84,281 +76,216 @@
     <section>
       <h2>คำขอจองเตียง ICU</h2>
       <div class="tab-bar">
-        <button class="tab-btn active" onclick="switchTab('pending')">รอดำเนินการ</button>
-        <button class="tab-btn" onclick="switchTab('all')">ทั้งหมด</button>
+        <button class="tab-btn active" id="tabPending">รอดำเนินการ</button>
+        <button class="tab-btn" id="tabAll">ทั้งหมด</button>
       </div>
       <table>
-        <thead><tr><th>#</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>ICU Type</th><th>ความเร่งด่วน</th><th>สถานะการเข้า ICU</th><th>เวลา</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead>
-        <tbody id="submissionsBody"></tbody>
+        <thead><tr><th>#</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>ICU Type</th><th>ความเร่งด่วน</th><th>สถานะเข้า ICU</th><th>เวลา</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead>
+        <tbody id="subBody"></tbody>
       </table>
     </section>
 
     <section>
       <h2>จัดการสิทธิ์ผู้ใช้ LINE</h2>
       <table>
-        <thead><tr><th>ชื่อ LINE</th><th>LINE userId</th><th>สิทธิ์ปัจจุบัน</th><th>เปลี่ยนสิทธิ์</th></tr></thead>
+        <thead><tr><th>ชื่อ LINE</th><th>LINE userId</th><th>สิทธิ์</th><th>เปลี่ยนสิทธิ์</th></tr></thead>
         <tbody id="usersBody"></tbody>
       </table>
     </section>
   </main>
 </div>
 
-<!-- Modal รายละเอียด -->
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
-  <div class="modal" id="modalContent">
+<div class="modal-overlay" id="modal">
+  <div class="modal">
     <h3 id="modalTitle"></h3>
     <div id="modalBody"></div>
-    <button class="modal-close" onclick="hideModal()">ปิด</button>
+    <button class="modal-close" id="modalClose">ปิด</button>
   </div>
 </div>
 
 <script>
-let currentTab = 'pending';
-let allSubmissions = [];
+var allSubs = [];
+var currentTab = 'pending';
+
+var bedStatusLabel = { available:'ว่าง', occupied:'มีผู้ป่วย', cleaning:'ทำความสะอาด', closed:'ปิดใช้งาน' };
+var nextStatus = { available:'occupied', occupied:'cleaning', cleaning:'available', closed:'available' };
+var formTypeLabel = { or:'🔪 ICU for OR', crisis:'🚨 ICU Crisis' };
+var icuTypeLabel = { plan:'📋 Plan', unplan:'🚨 Unplan' };
+var urgLabel = { emergency:'🔴 เร่งด่วนมาก', urgent:'🟡 ปานกลาง', normal:'🟢 ปกติ' };
+var admLabel = { pending:'รอติดตาม', confirmed:'✅ เข้า ICU แน่ๆ', return_ward:'🔙 ย้ายกลับ ward' };
+var statusLabel = { pending:'รอดำเนินการ', approved:'อนุมัติแล้ว', rejected:'ปฏิเสธแล้ว' };
+var fieldLabels = { doctor:'แพทย์ผู้ผ่าตัด', surgery_name:'ชื่อการผ่าตัด', booking_date:'วันที่ต้องการจอง', system:'ระบบ', sbp:'SBP (mmHg.)', hr:'HR (bpm.)', rr:'RR (bpm.)', temp:'Temp (°C)', sos_score:'SOS score', conscious:'Conscious', urine:'ปริมาณปัสสาวะ/8hrs', reason:'เรื่องที่ต้องการจอง' };
+
+document.getElementById('loginBtn').onclick = async function() {
+  var un = document.getElementById('un').value;
+  var pw = document.getElementById('pw').value;
+  var res = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:un, password:pw}) });
+  if (res.ok) { showApp(); }
+  else { document.getElementById('loginErr').textContent = 'username หรือ password ไม่ถูกต้อง'; }
+};
+
+document.getElementById('logoutBtn').onclick = async function() {
+  await fetch('/api/admin/logout', { method:'POST' });
+  location.reload();
+};
+
+document.getElementById('tabPending').onclick = function() { currentTab='pending'; this.className='tab-btn active'; document.getElementById('tabAll').className='tab-btn'; renderSubs(); };
+document.getElementById('tabAll').onclick = function() { currentTab='all'; this.className='tab-btn active'; document.getElementById('tabPending').className='tab-btn'; renderSubs(); };
+document.getElementById('modalClose').onclick = function() { document.getElementById('modal').classList.remove('show'); };
+document.getElementById('modal').onclick = function(e) { if(e.target===this) this.classList.remove('show'); };
 
 async function checkAuth() {
-  const r = await fetch('/api/admin/check').then(r => r.json());
-  if (r.isAdmin) {
-    document.getElementById('loginBox').style.display = 'none';
-    document.getElementById('appBody').style.display = 'block';
-    loadAll();
-    setInterval(loadAll, 10000);
-  }
+  var r = await fetch('/api/admin/check').then(function(r){return r.json();});
+  if (r.isAdmin) showApp();
 }
 
-async function login() {
-  const username = document.getElementById('username').value;
-  const password = document.getElementById('password').value;
-  const res = await fetch('/api/admin/login', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-  });
-  if (res.ok) { checkAuth(); }
-  else { document.getElementById('loginErr').textContent = 'username หรือ password ไม่ถูกต้อง'; }
+function showApp() {
+  document.getElementById('loginBox').style.display = 'none';
+  document.getElementById('appBody').style.display = 'block';
+  loadAll();
+  setInterval(loadAll, 10000);
 }
 
-async function logout() {
-  await fetch('/api/admin/logout', { method: 'POST' });
-  location.reload();
-}
-
-const bedStatusLabel = { available: 'ว่าง', occupied: 'มีผู้ป่วย', cleaning: 'ทำความสะอาด', closed: 'ปิดใช้งาน' };
-const nextStatus = { available: 'occupied', occupied: 'cleaning', cleaning: 'available', closed: 'available' };
-const formTypeLabel = { or: '🔪 ICU for OR', crisis: '🚨 ICU Crisis' };
-const icuTypeLabel = { plan: '📋 Plan', unplan: '🚨 Unplan' };
 async function loadAll() {
-  const [beds, submissions, users] = await Promise.all([
-    fetch('/api/beds').then(r => r.json()),
-    fetch('/api/form-submissions').then(r => r.json()),
-    fetch('/api/admin/users').then(r => r.json()),
-  ]);
-  allSubmissions = submissions;
-  renderBeds(beds);
-  renderSubmissions();
-  renderUsers(users);
-}
-
-function switchTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', (i === 0 && tab === 'pending') || (i === 1 && tab === 'all'));
-  });
-  renderSubmissions();
-}
-
-const urgencyLabel = { emergency: '🔴 เร่งด่วนมาก', urgent: '🟡 ปานกลาง', normal: '🟢 ปกติ' };
-const admissionLabel = { pending: 'รอติดตาม', confirmed: '✅ เข้า ICU แน่ๆ', return_ward: '🔙 ย้ายกลับ ward' };
-
-function renderSubmissions() {
-  const rows = currentTab === 'pending'
-    ? allSubmissions.filter(r => r.status === 'pending')
-    : allSubmissions;
-
-  document.getElementById('submissionsBody').innerHTML = rows.length ? rows.map(r => `
-    <tr>
-      <td>#${r.id}</td>
-      <td>
-        <button class="link-btn" onclick="showDetail(${r.id})">${r.patient_name || '-'}</button>
-        <br><span style="font-size:11px;color:#888;">HN: ${r.patient_hn || '-'}</span>
-      </td>
-      <td>${r.ward || '-'}</td>
-      <td><span class="badge ${r.form_type}">${formTypeLabel[r.form_type] || r.form_type}</span></td>
-      <td>${r.icu_type ? `<span class="badge ${r.icu_type}">${icuTypeLabel[r.icu_type]}</span>` : '-'}</td>
-      <td>
-        <div class="urgency-picker">
-          <div class="urgency-dot ${r.urgency||'normal'}" title="${urgencyLabel[r.urgency||'normal']}"></div>
-          <select onchange="updateUrgency(${r.id}, this.value)" style="padding:3px;border-radius:5px;border:1px solid #ddd;font-size:12px;">
-            <option value="emergency" ${r.urgency==='emergency'?'selected':''}>🔴 เร่งด่วนมาก</option>
-            <option value="urgent" ${r.urgency==='urgent'?'selected':''}>🟡 ปานกลาง</option>
-            <option value="normal" ${(r.urgency==='normal'||!r.urgency)?'selected':''}>🟢 ปกติ</option>
-          </select>
-        </div>
-      </td>
-      <td>
-        <select class="admission-select ${r.admission_status||'pending'}" onchange="updateAdmission(${r.id}, this.value)">
-          <option value="pending" ${(r.admission_status==='pending'||!r.admission_status)?'selected':''}>รอติดตาม</option>
-          <option value="confirmed" ${r.admission_status==='confirmed'?'selected':''}>✅ เข้า ICU แน่ๆ</option>
-          <option value="return_ward" ${r.admission_status==='return_ward'?'selected':''}>🔙 ย้ายกลับ ward</option>
-        </select>
-      </td>
-      <td>${new Date(r.submitted_at).toLocaleString('th-TH', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
-      <td><span class="badge ${statusBadge[r.status]}">${statusLabel[r.status]}</span></td>
-      <td>
-        ${r.status === 'pending' ? `
-          <button class="action-btn approve-btn" onclick="decideSubmission(${r.id}, 'approved')">✅ อนุมัติ</button>
-          <button class="action-btn reject-btn" onclick="decideSubmission(${r.id}, 'rejected')">❌ ปฏิเสธ</button>
-        ` : `<span style="color:#aaa;font-size:12px;">ดำเนินการแล้ว</span>`}
-      </td>
-    </tr>`).join('')
-    : '<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;">ไม่มีรายการ</td></tr>';
-}
-
-async function updateUrgency(id, urgency) {
-  await fetch(`/api/form-submissions/${id}/urgency`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ urgency })
-  });
-  loadAll();
-}
-
-async function updateAdmission(id, admissionStatus) {
-  await fetch(`/api/form-submissions/${id}/admission`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ admissionStatus })
-  });
-  loadAll();
-}
-
-async function decideSubmission(id, decision) {
-  const beds = await fetch('/api/beds').then(r => r.json());
-  const availableBeds = beds.filter(b => b.status === 'available');
-
-  let assignedBed = null;
-  let note = '';
-
-  if (decision === 'approved') {
-    if (availableBeds.length === 0) {
-      alert('ไม่มีเตียงว่างในขณะนี้');
-      return;
-    }
-    const bedOptions = availableBeds.map(b => b.label).join(', ');
-    assignedBed = prompt(`เลือกเตียงที่จะจัดให้:\n${bedOptions}\n\nพิมพ์ชื่อเตียง:`);
-    if (!assignedBed) return;
-    const validBed = availableBeds.find(b => b.label === assignedBed.trim());
-    if (!validBed) { alert('ชื่อเตียงไม่ถูกต้อง'); return; }
-    note = prompt('หมายเหตุ (ถ้ามี):') || '';
-    // อัปเดตสถานะเตียง
-    await fetch(`/api/admin/beds/${validBed.id}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'occupied' })
-    });
-  } else {
-    note = prompt('ระบุเหตุผลที่ปฏิเสธ:') || '';
-  }
-
-  await fetch(`/api/form-submissions/${id}/decision`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ decision, assignedBed, note })
-  });
-
-  loadAll();
-}
-
-async function showDetail(id) {
-  const r = await fetch(`/api/form-submissions/${id}`).then(r => r.json());
-  const extra = typeof r.extra_data === 'string' ? JSON.parse(r.extra_data) : (r.extra_data || {});
-
-  document.getElementById('modalTitle').textContent =
-    `รายละเอียด: ${r.patient_name || '-'} (HN: ${r.patient_hn || '-'})`;
-
-  const fieldLabels = {
-    doctor: 'แพทย์ผู้ผ่าตัด', surgery_name: 'ชื่อการผ่าตัด', booking_date: 'วันที่ต้องการจอง',
-    sbp: 'SBP (mmHg.)', hr: 'HR (bpm.)', rr: 'RR (bpm.)', temp: 'Temp (°C)',
-    sos_score: 'SOS score', conscious: 'Conscious', urine: 'ปริมาณปัสสาวะ/8hrs', reason: 'เรื่องที่ต้องการจอง'
-  };
-
-  const rows = [
-    ['ประเภท', formTypeLabel[r.form_type] || r.form_type],
-    ['ชื่อ-สกุลผู้ป่วย', r.patient_name || '-'],
-    ['HN', r.patient_hn || '-'],
-    ['หอผู้ป่วย', r.ward || '-'],
-    ['การวินิจฉัย', r.diagnosis || '-'],
-    ['ICU Type', icuTypeLabel[r.icu_type] || '-'],
-    ...Object.entries(extra).map(([k, v]) => [fieldLabels[k] || k, v || '-']),
-    ['สถานะ', statusLabel[r.status] || r.status],
-    ['เตียงที่จัดให้', r.assigned_bed || '-'],
-    ['หมายเหตุ', r.decision_note || '-'],
-    ['เวลาที่ส่งฟอร์ม', new Date(r.submitted_at).toLocaleString('th-TH')],
-  ];
-
-  document.getElementById('modalBody').innerHTML = rows.map(([label, val]) =>
-    `<div class="modal-row"><b>${label}</b><span>${val}</span></div>`
-  ).join('');
-
-  document.getElementById('modalOverlay').classList.add('show');
-}
-
-function hideModal() {
-  document.getElementById('modalOverlay').classList.remove('show');
-}
-
-function closeModal(e) {
-  if (e.target === document.getElementById('modalOverlay')) hideModal();
+  try {
+    var beds = await fetch('/api/beds').then(function(r){return r.json();});
+    var subs = await fetch('/api/form-submissions').then(function(r){return r.json();});
+    var users = await fetch('/api/admin/users').then(function(r){return r.json();});
+    renderBeds(beds);
+    allSubs = subs;
+    renderSubs();
+    renderUsers(users);
+  } catch(e) { console.log('loadAll error:', e); }
 }
 
 function renderBeds(beds) {
-  document.getElementById('bedsGrid').innerHTML = beds.map(b => `
-    <div class="bed ${b.status}" onclick="cycleBed(${b.id}, '${b.status}')">
-      ${b.label}<small>${bedStatusLabel[b.status]}</small>
-    </div>
-  `).join('');
+  document.getElementById('bedsGrid').innerHTML = beds.map(function(b) {
+    return '<div class="bed '+b.status+'" onclick="cycleBed('+b.id+',\''+b.status+'\')">'+b.label+'<small>'+bedStatusLabel[b.status]+'</small></div>';
+  }).join('');
 }
 
-async function cycleBed(id, currentStatus) {
-  const next = nextStatus[currentStatus];
-  if (!confirm(`เปลี่ยนสถานะเตียงเป็น "${bedStatusLabel[next]}" ?`)) return;
-  await fetch(`/api/admin/beds/${id}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: next })
-  });
+async function cycleBed(id, cur) {
+  var next = nextStatus[cur];
+  if (!confirm('เปลี่ยนสถานะเตียงเป็น "'+bedStatusLabel[next]+'" ?')) return;
+  await fetch('/api/admin/beds/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:next}) });
+  loadAll();
+}
+
+function renderSubs() {
+  var rows = currentTab === 'pending' ? allSubs.filter(function(r){return r.status==='pending';}) : allSubs;
+  if (!rows.length) {
+    document.getElementById('subBody').innerHTML = '<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;">ไม่มีรายการ</td></tr>';
+    return;
+  }
+  document.getElementById('subBody').innerHTML = rows.map(function(r) {
+    var urg = r.urgency || 'normal';
+    var adm = r.admission_status || 'pending';
+    var st = r.status || 'pending';
+    var actions = st === 'pending'
+      ? '<button class="action-btn approve-btn" onclick="decide('+r.id+',\'approved\')">✅ อนุมัติ</button><button class="action-btn reject-btn" onclick="decide('+r.id+',\'rejected\')">❌ ปฏิเสธ</button>'
+      : '<span style="color:#aaa;font-size:11px;">ดำเนินการแล้ว</span>';
+    return '<tr>'
+      +'<td>#'+r.id+'</td>'
+      +'<td><button class="link-btn" onclick="showDetail('+r.id+')">'+(r.patient_name||'-')+'</button><br><span style="font-size:10px;color:#888;">HN: '+(r.patient_hn||'-')+'</span></td>'
+      +'<td>'+(r.ward||'-')+'</td>'
+      +'<td><span class="badge '+(r.form_type||'')+'">'+(formTypeLabel[r.form_type]||r.form_type||'-')+'</span></td>'
+      +'<td>'+(r.icu_type?'<span class="badge '+r.icu_type+'">'+icuTypeLabel[r.icu_type]+'</span>':'-')+'</td>'
+      +'<td><select class="urg-select" onchange="updateUrg('+r.id+',this.value)">'
+        +'<option value="emergency"'+(urg==='emergency'?' selected':'')+'>🔴 เร่งด่วนมาก</option>'
+        +'<option value="urgent"'+(urg==='urgent'?' selected':'')+'>🟡 ปานกลาง</option>'
+        +'<option value="normal"'+(urg==='normal'?' selected':'')+'>🟢 ปกติ</option>'
+      +'</select></td>'
+      +'<td><select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
+        +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
+        +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU แน่ๆ</option>'
+        +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>🔙 ย้ายกลับ ward</option>'
+      +'</select></td>'
+      +'<td>'+new Date(r.submitted_at).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</td>'
+      +'<td><span class="badge '+(statusLabel[st]?st:'pending')+'">'+(statusLabel[st]||st)+'</span></td>'
+      +'<td>'+actions+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+async function showDetail(id) {
+  var r = await fetch('/api/form-submissions/'+id).then(function(r){return r.json();});
+  var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
+  document.getElementById('modalTitle').textContent = (r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')';
+  var rows = [
+    ['ประเภท', formTypeLabel[r.form_type]||r.form_type||'-'],
+    ['ชื่อ-สกุล', r.patient_name||'-'],
+    ['HN', r.patient_hn||'-'],
+    ['หอผู้ป่วย', r.ward||'-'],
+    ['Diagnosis', r.diagnosis||'-'],
+    ['ICU Type', icuTypeLabel[r.icu_type]||'-'],
+    ['ความเร่งด่วน', urgLabel[r.urgency||'normal']||'-'],
+    ['สถานะเข้า ICU', admLabel[r.admission_status||'pending']||'-'],
+    ['สถานะ', statusLabel[r.status]||r.status||'-'],
+    ['เตียงที่จัดให้', r.assigned_bed||'-'],
+    ['หมายเหตุ', r.decision_note||'-'],
+  ];
+  Object.entries(extra).forEach(function(kv) { rows.push([fieldLabels[kv[0]]||kv[0], kv[1]||'-']); });
+  rows.push(['เวลาที่ส่ง', new Date(r.submitted_at).toLocaleString('th-TH')]);
+  document.getElementById('modalBody').innerHTML = rows.map(function(rv) {
+    return '<div class="modal-row"><b>'+rv[0]+'</b><span>'+rv[1]+'</span></div>';
+  }).join('');
+  document.getElementById('modal').classList.add('show');
+}
+
+async function decide(id, decision) {
+  var assignedBed = null;
+  var note = '';
+  if (decision === 'approved') {
+    var beds = await fetch('/api/beds').then(function(r){return r.json();});
+    var avail = beds.filter(function(b){return b.status==='available';});
+    if (!avail.length) { alert('ไม่มีเตียงว่าง'); return; }
+    assignedBed = prompt('เลือกเตียง:\n'+avail.map(function(b){return b.label;}).join(', ')+'\n\nพิมพ์ชื่อเตียง:');
+    if (!assignedBed) return;
+    var bed = avail.find(function(b){return b.label===assignedBed.trim();});
+    if (!bed) { alert('ชื่อเตียงไม่ถูกต้อง'); return; }
+    note = prompt('หมายเหตุ (ถ้ามี):') || '';
+    await fetch('/api/admin/beds/'+bed.id, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:'occupied'}) });
+  } else {
+    note = prompt('ระบุเหตุผล:') || '';
+  }
+  await fetch('/api/form-submissions/'+id+'/decision', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({decision:decision, assignedBed:assignedBed, note:note}) });
+  loadAll();
+}
+
+async function updateUrg(id, val) {
+  await fetch('/api/form-submissions/'+id+'/urgency', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({urgency:val}) });
+  loadAll();
+}
+
+async function updateAdm(id, val) {
+  await fetch('/api/form-submissions/'+id+'/admission', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({admissionStatus:val}) });
   loadAll();
 }
 
 function renderUsers(rows) {
-  document.getElementById('usersBody').innerHTML = rows.map(u => `
-    <tr>
-      <td>
-        <span>${u.display_name || '-'}</span>
-        <button onclick="editName(${u.id}, '${(u.display_name||'').replace(/'/g,"\\'")}')" style="margin-left:6px;padding:2px 8px;font-size:11px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;">✏️</button>
-      </td>
-      <td style="font-size:11px;color:#888;">${u.line_user_id}</td>
-      <td>${u.role}</td>
-      <td>
-        <select class="role-select" onchange="changeRole(${u.id}, this.value)">
-          <option value="pending" ${u.role==='pending'?'selected':''}>pending</option>
-          <option value="requester" ${u.role==='requester'?'selected':''}>requester</option>
-          <option value="approver" ${u.role==='approver'?'selected':''}>approver</option>
-        </select>
-      </td>
-    </tr>
-  `).join('');
+  document.getElementById('usersBody').innerHTML = rows.map(function(u) {
+    return '<tr>'
+      +'<td>'+(u.display_name||'-')+' <button onclick="editName('+u.id+',\''+((u.display_name||'').replace(/'/g,"\\'"))+'\')" style="margin-left:4px;padding:1px 6px;font-size:10px;border:1px solid #ccc;border-radius:4px;cursor:pointer;">✏️</button></td>'
+      +'<td style="font-size:10px;color:#888;">'+u.line_user_id+'</td>'
+      +'<td>'+u.role+'</td>'
+      +'<td><select class="role-select" onchange="changeRole('+u.id+',this.value)">'
+        +'<option value="pending"'+(u.role==='pending'?' selected':'')+'>pending</option>'
+        +'<option value="requester"'+(u.role==='requester'?' selected':'')+'>requester</option>'
+        +'<option value="approver"'+(u.role==='approver'?' selected':'')+'>approver</option>'
+      +'</select></td>'
+      +'</tr>';
+  }).join('');
 }
 
-async function editName(id, currentName) {
-  const newName = prompt('ใส่ชื่อใหม่:', currentName);
-  if (newName === null) return;
-  await fetch(`/api/admin/users/${id}/name`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ displayName: newName.trim() })
-  });
+async function editName(id, cur) {
+  var n = prompt('ใส่ชื่อใหม่:', cur);
+  if (!n) return;
+  await fetch('/api/admin/users/'+id+'/name', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({displayName:n.trim()}) });
   loadAll();
 }
 
 async function changeRole(id, role) {
-  await fetch(`/api/admin/users/${id}/role`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ role })
-  });
+  await fetch('/api/admin/users/'+id+'/role', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role:role}) });
   loadAll();
 }
 
