@@ -92,7 +92,7 @@
         <button class="tab-btn" id="tabAll">ทั้งหมด</button>
       </div>
       <table>
-        <thead><tr><th>#</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>ICU Type</th><th>ความเร่งด่วน</th><th>สถานะเข้า ICU</th><th>เวลา</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead>
+        <thead><tr><th>#</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>ICU Type</th><th>ความเร่งด่วน</th><th>สถานะเข้า ICU</th><th>เวลา</th><th>สถานะ / ดำเนินการ</th></tr></thead>
         <tbody id="subBody"></tbody>
       </table>
     </section>
@@ -217,8 +217,11 @@ function renderSubs() {
         +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>🔙 ย้ายกลับ ward</option>'
       +'</select></td>'
       +'<td>'+new Date(r.submitted_at).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</td>'
-      +'<td><span class="badge '+st+'">'+(statusLabel[st]||st)+'</span></td>'
-      +'<td>'+actionSel+'</td>'
+      +'<td>'
+        +(st==='pending'
+          ? '<select class="action-sel" onchange="handleAction('+r.id+',this)"><option value="">⏳ รอดำเนินการ</option><option value="approved">✅ อนุมัติ</option><option value="rejected">❌ ปฏิเสธ</option></select>'
+          : '<span class="badge '+st+'">'+(statusLabel[st]||st)+'</span>')
+      +'</td>'
       +'</tr>';
   }).join('');
 }
