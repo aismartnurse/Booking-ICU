@@ -343,9 +343,7 @@ async function deleteSubmission(id) {
   if (pw !== '1234') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
   if (!confirm('ยืนยันลบคำขอ #'+id+' ?')) return;
   var res = await fetch('/api/form-submissions/'+id, {
-    method:'DELETE',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({password:'1234'})
+    method:'DELETE'
   });
   if (res.ok) {
     document.getElementById('detailModal').classList.remove('show');
