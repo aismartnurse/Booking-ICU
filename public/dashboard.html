@@ -100,7 +100,7 @@
         </div>
       </div>
       <table>
-        <thead><tr><th>#</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>ICU Type</th><th>วันที่จอง</th><th>ความเร่งด่วน</th><th>สถานะเข้า ICU</th><th>เวลาที่ส่ง</th><th>สถานะ / ดำเนินการ</th></tr></thead>
+        <thead><tr><th>วันที่ส่งคำขอ</th><th>#</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>วันที่ต้องการใช้เตียง</th><th>ความเร่งด่วน</th><th>สถานะ / ดำเนินการ</th><th>สถานะเข้า ICU</th><th>ICU Type</th></tr></thead>
         <tbody id="subBody"></tbody>
       </table>
     </section>
@@ -137,7 +137,24 @@ var nextStatus = { available:'occupied', occupied:'cleaning', cleaning:'availabl
 var formTypeLabel = { or:'OR', crisis:'Crisis' };
 var icuTypeLabel = { plan:'📋 Plan', unplan:'🚨 Unplan' };
 var admLabel = { pending:'รอติดตาม', confirmed:'✅ เข้า ICU แน่ๆ', return_ward:'🔙 ย้ายกลับ ward' };
-var statusLabel = { pending:'รอดำเนินการ', approved:'อนุมัติแล้ว', rejected:'ปฏิเสธแล้ว' };
+var statusLabel = {
+  pending: '⏳ รอดำเนินการ',
+  acknowledged: '✅ รับทราบ รอดำเนินการ',
+  waiting_bed: '🟡 รับทราบ รอเตียงว่าง',
+  failed: '❌ คำขอยังไม่สำเร็จ'
+};
+var statusColor = {
+  pending: '#b9770e',
+  acknowledged: '#1e8449',
+  waiting_bed: '#b7770d',
+  failed: '#c0392b'
+};
+var statusBg = {
+  pending: '#fef5e7',
+  acknowledged: '#eafaf1',
+  waiting_bed: '#fef9e7',
+  failed: '#fdecea'
+};
 var fieldLabels = { doctor:'แพทย์ผู้ผ่าตัด', surgery_name:'ชื่อการผ่าตัด', booking_date:'วันที่ต้องการจอง', system:'ระบบ', sbp:'SBP (mmHg.)', hr:'HR (bpm.)', rr:'RR (bpm.)', temp:'Temp (°C)', sos_score:'SOS score', conscious:'Conscious', urine:'ปริมาณปัสสาวะ/8hrs', reason:'เรื่องที่ต้องการจอง' };
 
 document.getElementById('loginBtn').onclick = async function() {
@@ -239,25 +256,38 @@ function renderSubs() {
     var urgNext = {normal:'urgent', urgent:'emergency', emergency:'normal'};
     var dot = '<button class="urg-btn '+urg+'" title="คลิกเปลี่ยน" onclick="updateUrg('+r.id+',\''+urgNext[urg]+'\')"></button>';
 
+    // สถานะ dropdown ใหม่
+    var st = r.status||'pending';
+    var stCell = '<select class="action-sel" onchange="updateStatus('+r.id+',this)" style="border-color:'+(statusColor[st]||'#ddd')+';color:'+(statusColor[st]||'#333')+';background:'+(statusBg[st]||'#fff')+';font-weight:600;">'
+      +'<option value="pending"'+(st==='pending'?' selected':'')+'>⏳ รอดำเนินการ</option>'
+      +'<option value="acknowledged"'+(st==='acknowledged'?' selected':'')+'>✅ รับทราบ รอดำเนินการ</option>'
+      +'<option value="waiting_bed"'+(st==='waiting_bed'?' selected':'')+'>🟡 รับทราบ รอเตียงว่าง</option>'
+      +'<option value="failed"'+(st==='failed'?' selected':'')+'>❌ คำขอยังไม่สำเร็จ</option>'
+      +'</select>';
+
+    // ICU Type editable
+    var icuCell = '<select class="adm-select" onchange="updateIcuType('+r.id+',this.value)">'
+      +'<option value="plan"'+(r.icu_type==='plan'?' selected':'')+'>📋 Plan</option>'
+      +'<option value="unplan"'+(r.icu_type==='unplan'?' selected':'')+'>🚨 Unplan</option>'
+      +'</select>';
+
+    var sentDate = new Date(r.submitted_at).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+
     return '<tr>'
+      +'<td style="font-size:11px;color:#555;">'+sentDate+'</td>'
       +'<td>#'+r.id+'</td>'
       +'<td><button class="link-btn" onclick="showDetail('+r.id+')">'+(r.patient_name||'-')+'</button><br><span style="font-size:10px;color:#888;">HN: '+(r.patient_hn||'-')+'</span></td>'
       +'<td>'+(r.ward||'-')+'</td>'
       +'<td><span class="badge '+(r.form_type||'')+'">'+(formTypeLabel[r.form_type]||r.form_type||'-')+'</span></td>'
-      +'<td>'+(r.icu_type?'<span class="badge '+r.icu_type+'">'+icuTypeLabel[r.icu_type]+'</span>':'-')+'</td>'
       +'<td style="font-weight:600;color:#2c3e50;">'+bookingDate+'</td>'
       +'<td>'+dot+'</td>'
+      +'<td>'+stCell+'</td>'
       +'<td><select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
         +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
         +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU แน่ๆ</option>'
         +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>🔙 ย้ายกลับ ward</option>'
       +'</select></td>'
-      +'<td>'+new Date(r.submitted_at).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</td>'
-      +'<td>'
-        +(st==='pending'
-          ? '<select class="action-sel" onchange="handleAction('+r.id+',this)"><option value="">⏳ รอดำเนินการ</option><option value="approved">✅ อนุมัติ</option><option value="rejected">❌ ปฏิเสธ</option></select>'
-          : '<span class="badge '+st+'">'+(statusLabel[st]||st)+'</span>')
-      +'</td>'
+      +'<td>'+icuCell+'</td>'
       +'</tr>';
   }).join('');
 }
@@ -281,6 +311,17 @@ async function handleAction(id, sel) {
     note = prompt('ระบุเหตุผลที่ปฏิเสธ:') || '';
   }
   await fetch('/api/form-submissions/'+id+'/decision', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({decision:decision,assignedBed:assignedBed,note:note})});
+  loadAll();
+}
+
+async function updateStatus(id, sel) {
+  var val = sel.value;
+  await fetch('/api/form-submissions/'+id+'/status', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:val})});
+  loadAll();
+}
+
+async function updateIcuType(id, val) {
+  await fetch('/api/form-submissions/'+id+'/icu-type', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({icuType:val})});
   loadAll();
 }
 
