@@ -215,6 +215,20 @@ router.delete('/form-submissions/:id', requireAdmin, async (req, res) => {
   }
 });
 
+router.put('/form-submissions/:id/icu-type', requireAdmin, async (req, res) => {
+  const { icuType } = req.body;
+  if (!['plan','unplan'].includes(icuType)) return res.status(400).json({ error: 'invalid' });
+  await db.run('UPDATE form_submissions SET icu_type=$1, updated_at=NOW() WHERE id=$2', [icuType, req.params.id]);
+  res.json({ ok: true });
+});
+
+router.put('/form-submissions/:id/status', requireAdmin, async (req, res) => {
+  const { status } = req.body;
+  if (!['pending','acknowledged','waiting_bed','failed'].includes(status)) return res.status(400).json({ error: 'invalid' });
+  await db.run('UPDATE form_submissions SET status=$1, updated_at=NOW() WHERE id=$2', [status, req.params.id]);
+  res.json({ ok: true });
+});
+
 router.put('/form-submissions/:id/note', requireAdmin, async (req, res) => {
   const { note } = req.body;
   await db.run('UPDATE form_submissions SET decision_note=$1, updated_at=NOW() WHERE id=$2', [note||null, req.params.id]);
