@@ -124,7 +124,7 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>ผู้ป่วย</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>ICU Type</th><th>ความเร่งด่วน</th><th>วันที่ต้องการใช้เตียง</th><th>เวลาที่ส่ง</th><th>สถานะ</th></tr>
+          <tr><th>วันที่ส่งคำขอ</th><th>ผู้ป่วย</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>วันที่ต้องการใช้เตียง</th><th>ความเร่งด่วน</th><th>สถานะ</th><th>ICU Type</th></tr>
         </thead>
         <tbody id="pendingBody"><tr><td colspan="8" class="empty">กำลังโหลด...</td></tr></tbody>
       </table>
@@ -203,14 +203,14 @@ async function loadData() {
           const stBg = statusBg[st] || '#fef5e7';
           return `
           <tr>
+            <td>${new Date(r.submitted_at).toLocaleString('th-TH', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</td>
             <td><b>${r.patient_name || '-'}</b><br><span style="font-size:11px;color:#888;">HN: ${r.patient_hn || '-'}</span></td>
             <td>${r.ward || '-'}</td>
             <td><span class="badge ${r.form_type || ''}">${formType[r.form_type] || r.form_type || '-'}</span></td>
-            <td>${r.icu_type ? `<span class="badge ${r.icu_type}">${icuType[r.icu_type]}</span>` : '-'}</td>
-            <td>${urgDot[r.urgency || 'normal'] || '🟢'}</td>
             <td>${extra.booking_date || '-'}</td>
-            <td>${new Date(r.submitted_at).toLocaleString('th-TH', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</td>
+            <td>${urgDot[r.urgency || 'normal'] || '🟢'}</td>
             <td><span style="padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;background:${stBg};color:${stColor};">${stLabel}</span></td>
+            <td>${r.icu_type ? `<span class="badge ${r.icu_type}">${icuType[r.icu_type]}</span>` : '-'}</td>
           </tr>
         `}).join('')
       : '<tr><td colspan="8" class="empty">✅ ไม่มีคำขอในขณะนี้</td></tr>';
