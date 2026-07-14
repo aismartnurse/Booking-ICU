@@ -240,9 +240,10 @@ function renderSubs() {
   // เรียงตามความเร่งด่วน: แดง → เหลือง → เขียว (ทำหลัง filter)
   var urgOrder = { emergency: 0, urgent: 1, normal: 2 };
   rows = rows.slice().sort(function(a, b) {
-  var ua = urgOrder[a.urgency] !== undefined ? urgOrder[a.urgency] : 2;
-var ub = urgOrder[b.urgency] !== undefined ? urgOrder[b.urgency] : 2;
-return ua - ub;
+    var ua = urgOrder[a.urgency] !== undefined ? urgOrder[a.urgency] : 2;
+    var ub = urgOrder[b.urgency] !== undefined ? urgOrder[b.urgency] : 2;
+    return ua - ub;
+  });
 
   if (!rows.length) {
     document.getElementById('subBody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;">ไม่มีรายการ</td></tr>';
