@@ -181,24 +181,35 @@ function showApp() {
 }
 
 var lastSubCount = null;
+var alertInterval = null;
+var pendingAlertIds = new Set(); // เก็บ id ที่ยังรอดำเนินการ
 
 function playAlert() {
-  try {
-    var ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [0, 0.15, 0.3].forEach(function(delay) {
+  if (alertInterval) return; // กำลังดังอยู่แล้ว
+  function beep() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
       var osc = ctx.createOscillator();
       var gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.frequency.value = 880;
       osc.type = 'sine';
-      gain.gain.setValueAtTime(0, ctx.currentTime + delay);
-      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + delay + 0.05);
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + delay + 0.2);
-      osc.start(ctx.currentTime + delay);
-      osc.stop(ctx.currentTime + delay + 0.25);
-    });
-  } catch(e) {}
+      gain.gain.setValueAtTime(0.5, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.45);
+    } catch(e) {}
+  }
+  beep();
+  alertInterval = setInterval(beep, 1000);
+}
+
+function stopAlert() {
+  if (alertInterval) {
+    clearInterval(alertInterval);
+    alertInterval = null;
+  }
 }
 
 async function loadAll() {
@@ -209,11 +220,18 @@ async function loadAll() {
     renderBeds(beds);
     allSubs = subs;
 
-    // ตรวจจับคำขอใหม่ → เล่นเสียง
+    // ตรวจจับคำขอใหม่ → เริ่มเสียง
     if (lastSubCount !== null && subs.length > lastSubCount) {
       playAlert();
     }
     lastSubCount = subs.length;
+
+    // เช็คว่ายังมีคำขอที่ status = 'pending' อยู่ไหม
+    // ถ้าไม่มีเลย → หยุดเสียง
+    var hasPending = subs.some(function(r) { return r.status === 'pending'; });
+    if (!hasPending) {
+      stopAlert();
+    }
     renderSubs();
     renderUsers(users);
   } catch(e) { console.log('error:', e); }
@@ -383,6 +401,11 @@ function toggleShowAll() {
 async function updateStatus(id, sel) {
   var val = sel.value;
   await fetch('/api/form-submissions/'+id+'/status', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:val})});
+  // ถ้าเปลี่ยนออกจาก pending → เช็คว่ายังมี pending อื่นอยู่ไหม
+  if (val !== 'pending') {
+    var remaining = allSubs.filter(function(r){ return r.id !== id && r.status === 'pending'; });
+    if (remaining.length === 0) stopAlert();
+  }
   loadAll();
 }
 
