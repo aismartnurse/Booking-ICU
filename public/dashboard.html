@@ -139,7 +139,6 @@ var statusLabel = {
   pending: '⏳ รอดำเนินการ',
   acknowledged: '✅ รับทราบ รอดำเนินการ',
   waiting_bed: '🟡 รับทราบ รอเตียงว่าง',
-  failed: '❌ คำขอยังไม่สำเร็จ'
 };
 var statusColor = {
   pending: '#b9770e',
@@ -314,7 +313,6 @@ function renderSubs() {
       +'<option value="pending"'+(st==='pending'?' selected':'')+'>⏳ รอดำเนินการ</option>'
       +'<option value="acknowledged"'+(st==='acknowledged'?' selected':'')+'>✅ รับทราบ รอดำเนินการ</option>'
       +'<option value="waiting_bed"'+(st==='waiting_bed'?' selected':'')+'>🟡 รับทราบ รอเตียงว่าง</option>'
-      +'<option value="failed"'+(st==='failed'?' selected':'')+'>❌ คำขอยังไม่สำเร็จ</option>'
       +'</select>';
 
     // ICU Type editable
