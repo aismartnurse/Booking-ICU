@@ -211,12 +211,6 @@ function renderSubs() {
 
   var rows = allSubs; // แสดงทุกคำขอเสมอ
 
-  // เรียงตามความเร่งด่วน: แดง → เหลือง → เขียว
-  var urgOrder = { emergency: 0, urgent: 1, normal: 2 };
-  rows = rows.slice().sort(function(a, b) {
-    return (urgOrder[a.urgency || 'normal'] || 2) - (urgOrder[b.urgency || 'normal'] || 2);
-  });
-
   // กรองตาม search
   if (search) {
     rows = rows.filter(function(r) {
@@ -231,7 +225,6 @@ function renderSubs() {
     rows = rows.filter(function(r) {
       var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
       var bd = extra.booking_date || '';
-      // แปลง booking_date (14/7/2026 หรือ 2026-07-14) ให้เทียบกับ dateFilter
       if (!bd) return false;
       try {
         var parts = bd.includes('/') ? bd.split('/') : bd.split('-');
@@ -243,6 +236,12 @@ function renderSubs() {
       } catch(e) { return false; }
     });
   }
+
+  // เรียงตามความเร่งด่วน: แดง → เหลือง → เขียว (ทำหลัง filter)
+  var urgOrder = { emergency: 0, urgent: 1, normal: 2 };
+  rows = rows.slice().sort(function(a, b) {
+    return (urgOrder[a.urgency||'normal']||2) - (urgOrder[b.urgency||'normal']||2);
+  });
 
   if (!rows.length) {
     document.getElementById('subBody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;">ไม่มีรายการ</td></tr>';
