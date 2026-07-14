@@ -17,9 +17,10 @@
   .bed.cleaning { background:#f39c12; }
   .bed.closed { background:#7f8c8d; }
   .bed small { display:block; font-weight:400; font-size:11px; margin-top:4px; }
-  table { width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; }
-  th, td { padding:9px 10px; text-align:left; font-size:12px; border-bottom:1px solid #eee; vertical-align:middle; }
-  th { background:#fafafa; font-weight:600; }
+  table { width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; min-width:900px; }
+  th, td { padding:8px 10px; text-align:left; font-size:12px; border-bottom:1px solid #eee; vertical-align:middle; }
+  th { background:#fafafa; font-weight:600; white-space:nowrap; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius:8px; }
   .badge { padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
   .badge.pending { background:#fef5e7; color:#b9770e; }
   .badge.approved { background:#eafaf1; color:#1e8449; }
@@ -97,10 +98,12 @@
         </div>
         <button id="showAllBtn" onclick="toggleShowAll()" style="padding:7px 14px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">📋 แสดงทั้งหมด</button>
       </div>
+      <div class="table-wrap">
       <table>
         <thead><tr><th>วันที่ส่งคำขอ</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>วันที่ต้องการใช้เตียง</th><th>ความเร่งด่วน</th><th>สถานะ / ดำเนินการ</th><th>สถานะเข้า ICU</th><th>ICU Type</th></tr></thead>
         <tbody id="subBody"></tbody>
       </table>
+      </div>
     </section>
   </main>
 </div>
