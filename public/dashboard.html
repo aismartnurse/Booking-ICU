@@ -94,6 +94,7 @@
           <input id="dateFilter" type="date" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;" onchange="renderSubs()" />
           <button onclick="document.getElementById('dateFilter').value='';renderSubs();" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">✕ ล้าง</button>
         </div>
+        <button id="showAllBtn" onclick="toggleShowAll()" style="padding:7px 14px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">📋 แสดงทั้งหมด</button>
       </div>
       <table>
         <thead><tr><th>วันที่ส่งคำขอ</th><th>ผู้ป่วย / HN</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>วันที่ต้องการใช้เตียง</th><th>ความเร่งด่วน</th><th>สถานะ / ดำเนินการ</th><th>สถานะเข้า ICU</th><th>ICU Type</th></tr></thead>
@@ -133,7 +134,7 @@ var bedStatusLabel = { available:'ว่าง', occupied:'มีผู้ป่
 var nextStatus = { available:'occupied', occupied:'cleaning', cleaning:'available', closed:'available' };
 var formTypeLabel = { or:'OR', crisis:'Crisis' };
 var icuTypeLabel = { plan:'📋 Plan', unplan:'🚨 Unplan' };
-var admLabel = { pending:'รอติดตาม', confirmed:'✅ เข้า ICU แน่ๆ', return_ward:'🔙 ย้ายกลับ ward' };
+var admLabel = { pending:'รอติดตาม', confirmed:'✅ เข้า ICU', return_ward:'❌ ไม่เข้า ICU' };
 var statusLabel = {
   pending: '⏳ รอดำเนินการ',
   acknowledged: '✅ รับทราบ รอดำเนินการ',
@@ -209,7 +210,14 @@ function renderSubs() {
   var search = (document.getElementById('searchInput').value||'').toLowerCase();
   var dateFilter = document.getElementById('dateFilter').value; // YYYY-MM-DD
 
-  var rows = allSubs; // แสดงทุกคำขอเสมอ
+  var rows = allSubs;
+
+  // กรองตาม showAll - ถ้าไม่ showAll จะแสดงเฉพาะ รอติดตาม
+  if (!showAll) {
+    rows = rows.filter(function(r) {
+      return (r.admission_status || 'pending') === 'pending';
+    });
+  }
 
   // กรองตาม search
   if (search) {
@@ -287,8 +295,8 @@ function renderSubs() {
       +'<td>'+stCell+'</td>'
       +'<td><select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
         +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
-        +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU แน่ๆ</option>'
-        +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>🔙 ย้ายกลับ ward</option>'
+        +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU</option>'
+        +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>❌ ไม่เข้า ICU</option>'
       +'</select></td>'
       +'<td>'+icuCell+'</td>'
       +'</tr>';
@@ -315,6 +323,17 @@ async function handleAction(id, sel) {
   }
   await fetch('/api/form-submissions/'+id+'/decision', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({decision:decision,assignedBed:assignedBed,note:note})});
   loadAll();
+}
+
+var showAll = false;
+
+function toggleShowAll() {
+  showAll = !showAll;
+  var btn = document.getElementById('showAllBtn');
+  btn.style.background = showAll ? '#06c755' : '#fff';
+  btn.style.color = showAll ? '#fff' : '#333';
+  btn.textContent = showAll ? '✅ แสดงทั้งหมด' : '📋 แสดงทั้งหมด';
+  renderSubs();
 }
 
 async function updateStatus(id, sel) {
