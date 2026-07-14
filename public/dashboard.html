@@ -490,7 +490,12 @@ async function releaseBedIfAssigned(id) {
 async function showDetail(id) {
   var r = await fetch('/api/form-submissions/'+id).then(function(r){return r.json();});
   var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
-  document.getElementById('detailTitle').textContent=(r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')';
+
+  // Emergency badge มุมขวาบน
+  var emergencyBadge = extra.emergency
+    ? '<span style="position:absolute;top:16px;right:50px;background:#e74c3c;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">🚨 '+extra.emergency+'</span>'
+    : '';
+  document.getElementById('detailTitle').innerHTML = (r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')'+emergencyBadge;
 
   var rows=[
     ['เวลาที่ส่ง', new Date(r.submitted_at).toLocaleString('th-TH')],
@@ -499,11 +504,11 @@ async function showDetail(id) {
     ['HN', r.patient_hn||'-'],
     ['หอผู้ป่วย', r.ward||'-'],
     ['Diagnosis', r.diagnosis||'-'],
-    ['ชื่อการผ่าตัด', extra.surgery_name||'-'],
-    ['แพทย์ผู้ผ่าตัด', extra.doctor||'-'],
-    ['วันที่ต้องการจอง', extra.booking_date||'-'],
+    ['Underlying disease', extra.underlying||''],
+    ['ชื่อการผ่าตัด', extra.surgery_name||''],
+    ['แพทย์ผู้ผ่าตัด', extra.doctor||''],
+    ['วันที่ต้องการจอง', extra.booking_date||''],
     ['ระบบ', extra.system||''],
-    // Crisis fields
     ['SBP (mmHg.)', extra.sbp||''],
     ['HR (bpm.)', extra.hr||''],
     ['RR (bpm.)', extra.rr||''],
@@ -512,7 +517,9 @@ async function showDetail(id) {
     ['Conscious', extra.conscious||''],
     ['ปริมาณปัสสาวะ/8hrs', extra.urine||''],
     ['เรื่องที่ต้องการจอง', extra.reason||''],
-  ].filter(function(rv){ return rv[1] && rv[1]!=='-'; });
+    ['Resuscitation', extra.resuscitation||''],
+    ['Line Notify', extra.line_notify||''],
+  ].filter(function(rv){ return rv[1] && rv[1]!=='-' && rv[1]!==''; });
 
   document.getElementById('detailBody').innerHTML = rows.map(function(rv){
     return '<div class="modal-row"><b>'+rv[0]+'</b><span>'+rv[1]+'</span></div>';
@@ -526,7 +533,6 @@ async function showDetail(id) {
   + '<button onclick="saveNote('+id+')" style="padding:8px;background:#06c755;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">💾 บันทึกหมายเหตุ</button>'
   + '</div>';
 
-  document.getElementById('detailTitle').textContent = (r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')';
   document.getElementById('detailModal').classList.add('show');
 }
 
