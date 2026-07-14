@@ -61,18 +61,16 @@
   .dot.closed    { background: #aab7b8; }
 
   /* ตารางคำขอ */
-  .table-wrap { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
-  table { width: 100%; border-collapse: collapse; }
-  th { background: #f8f9fa; padding: 11px 14px; font-size: 13px; text-align: left; color: #555; border-bottom: 2px solid #eee; }
-  td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+  .table-wrap { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; min-width: 700px; }
+  th { background: #f8f9fa; padding: 11px 14px; font-size: 13px; text-align: left; color: #555; border-bottom: 2px solid #eee; white-space: nowrap; }
+  td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
   tr:last-child td { border-bottom: none; }
   .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-  .badge.emergency { background: #fadbd8; color: #c0392b; }
-  .badge.urgent    { background: #fef9e7; color: #b7770d; }
-  .badge.elective  { background: #d5f5e3; color: #1e8449; }
-  .badge.pending   { background: #fef9e7; color: #b7770d; }
-  .badge.approved  { background: #d5f5e3; color: #1e8449; }
-  .badge.waiting   { background: #d6eaf8; color: #1a5276; }
+  .badge.or { background: #f5eef8; color: #7d3c98; }
+  .badge.crisis { background: #fdecea; color: #c0392b; }
+  .badge.plan { background: #eaf2fb; color: #1a5276; }
+  .badge.unplan { background: #fdecea; color: #c0392b; }
   .empty { text-align: center; color: #aaa; padding: 24px; }
 
   .refresh-note { text-align: center; font-size: 12px; color: #aaa; margin-top: 20px; padding-bottom: 20px; }
@@ -81,6 +79,9 @@
     .summary { grid-template-columns: repeat(2, 1fr); }
     header { flex-direction: column; gap: 8px; align-items: flex-start; }
     .clock { text-align: left; }
+    main { padding: 16px 12px; }
+    .summary-card .num { font-size: 32px; }
+    .beds-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
   }
 </style>
 </head>
