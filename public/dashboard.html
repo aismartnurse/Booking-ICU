@@ -181,7 +181,7 @@ function showApp() {
   document.getElementById('loginBox').style.display='none';
   document.getElementById('appBody').style.display='block';
   loadAll();
-  setInterval(loadAll, 10000);
+  setInterval(loadAll, 30000);
 }
 
 var lastSubCount = null;
@@ -330,12 +330,21 @@ function renderSubs() {
     return;
   }
 
+  var rowBg = {
+    pending: '#fffdf5',
+    acknowledged: '#f0fff4',
+    waiting_bed: '#fffde7',
+    completed: '#e8f4fd',
+    failed: '#fff5f5',
+  };
+
   document.getElementById('subBody').innerHTML = rows.map(function(r) {
     var urg = r.urgency||'normal';
     var adm = r.admission_status||'pending';
     var st = r.status||'pending';
     var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
     var bookingDate = extra.booking_date || '-';
+    var bg = rowBg[st] || '#fff';
 
     var urgNext = {normal:'urgent', urgent:'emergency', emergency:'normal'};
     var dot = '<button class="urg-btn '+urg+'" title="คลิกเปลี่ยน" onclick="updateUrg('+r.id+',\''+urgNext[urg]+'\')"></button>';
@@ -357,9 +366,8 @@ function renderSubs() {
 
     var sentDate = new Date(r.submitted_at).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
 
-    return '<tr>'
+    return '<tr style="background:'+bg+';">'
       +'<td style="font-size:11px;color:#555;">'+sentDate+'</td>'
-      +'<td><button class="link-btn" onclick="showDetail('+r.id+')">'+(r.patient_name||'-')+'</button><br><span style="font-size:10px;color:#888;">HN: '+(r.patient_hn||'-')+'</span></td>'
       +'<td>'+(r.ward||'-')+'</td>'
       +'<td><span class="badge '+(r.form_type||'')+'">'+(formTypeLabel[r.form_type]||r.form_type||'-')+'</span></td>'
       +'<td style="font-weight:600;color:#2c3e50;">'+bookingDate+'</td>'
