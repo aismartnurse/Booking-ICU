@@ -493,7 +493,7 @@ async function showDetail(id) {
 
   // Emergency badge มุมขวาบน
   var emergencyBadge = extra.emergency
-    ? '<span style="position:absolute;top:16px;right:50px;background:#e74c3c;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">🚨 '+extra.emergency+'</span>'
+    ? '<span style="position:absolute;top:16px;right:50px;background:#e74c3c;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">🚨 Emer</span>'
     : '';
   document.getElementById('detailTitle').innerHTML = (r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')'+emergencyBadge;
 
