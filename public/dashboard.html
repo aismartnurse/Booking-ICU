@@ -98,6 +98,7 @@
         </div>
         <button id="showAllBtn" onclick="toggleShowAll()" style="padding:7px 14px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">📋 แสดงทั้งหมด</button>
         <button id="statsBtn" onclick="openStats()" style="padding:7px 14px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">📊 สถิติข้อมูล</button>
+        <button id="exportBtn" onclick="exportData()" style="padding:7px 14px;border:1px solid #16a085;border-radius:8px;font-size:12px;cursor:pointer;background:#16a085;color:#fff;font-weight:600;">📥 Export CSV</button>
       </div>
       <div class="table-wrap">
       <table>
@@ -123,6 +124,9 @@
   <div class="modal" style="max-width:760px;">
     <h3>📊 สถิติข้อมูลการจองเตียง ICU</h3>
     <div id="statsBody"></div>
+    <div style="margin-top:14px;display:flex;gap:10px;">
+      <button onclick="exportStats()" style="padding:8px 14px;border:1px solid #16a085;border-radius:8px;font-size:13px;cursor:pointer;background:#16a085;color:#fff;font-weight:600;">⬇️ ดาวน์โหลดสถิติ (CSV)</button>
+    </div>
     <button class="modal-close" onclick="document.getElementById('statsModal').classList.remove('show')">ปิด</button>
   </div>
 </div>
@@ -534,6 +538,83 @@ function openStats() {
 
   document.getElementById('statsBody').innerHTML = html;
   document.getElementById('statsModal').classList.add('show');
+}
+
+// ---- Export CSV ----
+function csvEscape(v) {
+  v = (v==null ? '' : String(v));
+  if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g,'""') + '"';
+  return v;
+}
+function downloadCSV(filename, rows) {
+  var csv = rows.map(function(r){ return r.map(csvEscape).join(','); }).join('\r\n');
+  var blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'}); // BOM ให้ Excel อ่านไทยถูก
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+function stamp() {
+  var d = new Date(), p = function(n){return String(n).padStart(2,'0');};
+  return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes());
+}
+
+// export ตารางคำขอทั้งหมด
+function exportData() {
+  var subs = allSubs || [];
+  if (!subs.length) { alert('ยังไม่มีข้อมูลให้ export'); return; }
+  var header = ['วันที่ส่งคำขอ','ชื่อผู้ป่วย','HN','หอผู้ป่วย','ประเภท','วันที่ต้องการใช้เตียง',
+    'ความเร่งด่วน','สถานะดำเนินการ','สถานะเข้า ICU','เตียงที่จัด','ICU Type','Diagnosis'];
+  var urgTxt = { emergency:'ฉุกเฉิน', urgent:'เร่งด่วน', normal:'ปกติ' };
+  var stTxt  = { pending:'รอดำเนินการ', acknowledged:'รับทราบ รอดำเนินการ', waiting_bed:'รับทราบ รอเตียงว่าง', completed:'ดำเนินการเสร็จสิ้น' };
+  var admTxt = { pending:'รอติดตาม', confirmed:'เข้า ICU', return_ward:'ไม่เข้า ICU' };
+  var icuTxt = { plan:'Plan', unplan:'Unplan' };
+  var rows = [header];
+  subs.forEach(function(r){
+    var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
+    rows.push([
+      new Date(r.submitted_at).toLocaleString('th-TH'),
+      r.patient_name||'', r.patient_hn||'', r.ward||'',
+      (formTypeLabel[r.form_type]||r.form_type||''),
+      extra.booking_date||'',
+      urgTxt[r.urgency]||r.urgency||'',
+      stTxt[r.status]||r.status||'',
+      admTxt[r.admission_status]||r.admission_status||'',
+      r.assigned_bed||'',
+      icuTxt[r.icu_type]||r.icu_type||'',
+      r.diagnosis||''
+    ]);
+  });
+  downloadCSV('booking-icu-data-'+stamp()+'.csv', rows);
+}
+
+// export สรุปสถิติ (จาก modal)
+function exportStats() {
+  var subs = allSubs || [];
+  if (!subs.length) { alert('ยังไม่มีข้อมูลให้ export'); return; }
+  function countBy(fn){ var m={}; subs.forEach(function(r){var k=fn(r)||'-';m[k]=(m[k]||0)+1;}); return m; }
+  var total = subs.length;
+  var beds = allBeds || [];
+  var occupied = beds.filter(function(b){return b.status==='occupied';}).length;
+  var rows = [['หัวข้อ','รายการ','จำนวน','เปอร์เซ็นต์']];
+  function add(group, m, order, labelMap){
+    var keys = order || Object.keys(m).sort(function(a,b){return m[b]-m[a];});
+    keys.forEach(function(k){
+      var n = m[k]||0;
+      rows.push([group, (labelMap && labelMap[k]) || k, n, (total?Math.round(n/total*100):0)+'%']);
+    });
+  }
+  rows.push(['ภาพรวม','คำขอทั้งหมด',total,'100%']);
+  rows.push(['ภาพรวม','เตียงที่ใช้งาน',occupied+' / '+beds.length,'']);
+  add('ความเร่งด่วน', countBy(function(r){return r.urgency||'normal';}), ['emergency','urgent','normal'], {emergency:'ฉุกเฉิน',urgent:'เร่งด่วน',normal:'ปกติ'});
+  add('สถานะดำเนินการ', countBy(function(r){return r.status||'pending';}), ['pending','acknowledged','waiting_bed','completed'], {pending:'รอดำเนินการ',acknowledged:'รับทราบ รอดำเนินการ',waiting_bed:'รับทราบ รอเตียงว่าง',completed:'ดำเนินการเสร็จสิ้น'});
+  add('ประเภทคำขอ', countBy(function(r){return r.form_type||'-';}), null, formTypeLabel);
+  add('สถานะเข้า ICU', countBy(function(r){return r.admission_status||'pending';}), ['confirmed','return_ward','pending'], {confirmed:'เข้า ICU',return_ward:'ไม่เข้า ICU',pending:'รอติดตาม'});
+  add('ICU Type', countBy(function(r){return r.icu_type||'plan';}), ['plan','unplan'], {plan:'Plan',unplan:'Unplan'});
+  add('หอผู้ป่วยต้นทาง', countBy(function(r){return r.ward||'-';}), null, null);
+  downloadCSV('booking-icu-stats-'+stamp()+'.csv', rows);
 }
 
 async function updateStatus(id, sel) {
