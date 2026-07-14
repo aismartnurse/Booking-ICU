@@ -293,11 +293,17 @@ function renderSubs() {
       +'<td style="font-weight:600;color:#2c3e50;">'+bookingDate+'</td>'
       +'<td>'+dot+'</td>'
       +'<td>'+stCell+'</td>'
-      +'<td><select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
-        +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
-        +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU</option>'
-        +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>❌ ไม่เข้า ICU</option>'
-      +'</select></td>'
+      +'<td>'
+        +'<select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
+          +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
+          +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU</option>'
+          +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>❌ ไม่เข้า ICU</option>'
+        +'</select>'
+        +(adm==='confirmed' && r.assigned_bed
+          ? '<br><span style="font-size:11px;font-weight:700;color:#1e8449;">🛏️ '+r.assigned_bed+'</span>'
+            +' <button onclick="moveBed('+r.id+',\''+r.assigned_bed+'\')" style="font-size:10px;padding:2px 6px;background:#f39c12;color:#fff;border:none;border-radius:4px;cursor:pointer;">ย้ายเตียง</button>'
+          : '')
+      +'</td>'
       +'<td>'+icuCell+'</td>'
       +'</tr>';
   }).join('');
@@ -353,8 +359,59 @@ async function updateUrg(id, val) {
 }
 
 async function updateAdm(id, val) {
-  await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:val})});
+  if (val === 'confirmed') {
+    // เลือกเตียงอัตโนมัติ
+    var beds = await fetch('/api/beds').then(function(r){return r.json();});
+    var avail = beds.filter(function(b){return b.status==='available';});
+    if (!avail.length) {
+      alert('ไม่มีเตียงว่างในขณะนี้');
+      loadAll();
+      return;
+    }
+    var bedName = prompt('เลือกเตียงสำหรับผู้ป่วย:\n'+avail.map(function(b){return b.label;}).join(', ')+'\n\nพิมพ์ชื่อเตียง:');
+    if (!bedName) { loadAll(); return; }
+    var bed = avail.find(function(b){return b.label===bedName.trim();});
+    if (!bed) { alert('ชื่อเตียงไม่ถูกต้อง'); loadAll(); return; }
+    // อัปเดตสถานะเตียงเป็น occupied
+    await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'occupied'})});
+    // บันทึก assigned_bed
+    await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:'confirmed', assignedBed:bed.label})});
+  } else if (val === 'return_ward') {
+    // ถ้าเคยมีเตียง ให้คืนเตียง
+    await releaseBedIfAssigned(id);
+    await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:'return_ward', assignedBed:null})});
+  } else {
+    await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:val, assignedBed:null})});
+  }
   loadAll();
+}
+
+async function moveBed(id, currentBed) {
+  var beds = await fetch('/api/beds').then(function(r){return r.json();});
+  var avail = beds.filter(function(b){return b.status==='available';});
+  if (!avail.length) { alert('ไม่มีเตียงว่าง'); return; }
+  var bedName = prompt('เลือกเตียงใหม่:\n'+avail.map(function(b){return b.label;}).join(', ')+'\n\nพิมพ์ชื่อเตียง:');
+  if (!bedName) return;
+  var bed = avail.find(function(b){return b.label===bedName.trim();});
+  if (!bed) { alert('ชื่อเตียงไม่ถูกต้อง'); return; }
+  // คืนเตียงเก่า
+  if (currentBed) {
+    var oldBed = beds.find(function(b){return b.label===currentBed;});
+    if (oldBed) await fetch('/api/admin/beds/'+oldBed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'available'})});
+  }
+  // จองเตียงใหม่
+  await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'occupied'})});
+  await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:'confirmed', assignedBed:bed.label})});
+  loadAll();
+}
+
+async function releaseBedIfAssigned(id) {
+  var sub = allSubs.find(function(r){return r.id===id;});
+  if (sub && sub.assigned_bed) {
+    var beds = await fetch('/api/beds').then(function(r){return r.json();});
+    var bed = beds.find(function(b){return b.label===sub.assigned_bed;});
+    if (bed) await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'available'})});
+  }
 }
 
 async function showDetail(id) {
