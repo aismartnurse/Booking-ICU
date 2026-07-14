@@ -185,24 +185,27 @@ var alertInterval = null;
 var pendingAlertIds = new Set(); // เก็บ id ที่ยังรอดำเนินการ
 
 function playAlert() {
-  if (alertInterval) return; // กำลังดังอยู่แล้ว
+  if (alertInterval) return;
   function beep() {
     try {
       var ctx = new (window.AudioContext || window.webkitAudioContext)();
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.5, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.4);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.45);
+      // เสียง 2 โน้ตสลับกันเร็วๆ แบบ alert ฉุกเฉิน
+      [[0, 1200],[0.15, 800],[0.3, 1200],[0.45, 800]].forEach(function(pair) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = pair[1];
+        osc.type = 'square';
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + pair[0]);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + pair[0] + 0.12);
+        osc.start(ctx.currentTime + pair[0]);
+        osc.stop(ctx.currentTime + pair[0] + 0.14);
+      });
     } catch(e) {}
   }
   beep();
-  alertInterval = setInterval(beep, 1000);
+  alertInterval = setInterval(beep, 700);
 }
 
 function stopAlert() {
