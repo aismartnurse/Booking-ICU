@@ -168,6 +168,23 @@ router.post('/form-submission', async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
       [formType, patientName || null, patientHn || null, ward || null, diagnosis || null, icuType || null, JSON.stringify(extraData || {})]
     );
+
+    // แจ้งเตือน LINE ทุก approver
+    const { notifyAllApprovers } = require('../lib/line');
+    const typeLabel = formType === 'or' ? '🔪 ICU for OR' : '🚨 ICU Crisis';
+    const extra = extraData || {};
+    const msg =
+      `🛏️ คำขอจองเตียง ICU ใหม่!\n` +
+      `ประเภท: ${typeLabel}\n` +
+      `ผู้ป่วย: ${patientName || '-'} (HN: ${patientHn || '-'})\n` +
+      `หอผู้ป่วย: ${ward || '-'}\n` +
+      `Diagnosis: ${diagnosis || '-'}\n` +
+      `ICU Type: ${icuType === 'unplan' ? 'Unplan' : 'Plan'}\n` +
+      (extra.booking_date ? `วันที่ต้องการ: ${extra.booking_date}\n` : '') +
+      (extra.emergency && extra.emergency.toLowerCase().includes('yes') ? `⚠️ Emergency!\n` : '') +
+      `\n📋 ดูรายละเอียด: https://booking-icu.onrender.com/dashboard.html`;
+    notifyAllApprovers(msg).catch(console.error);
+
     res.json({ ok: true, id: row.id });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -267,10 +284,32 @@ router.put('/form-submissions/:id/urgency', requireAdmin, async (req, res) => {
 router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => {
   const { admissionStatus, assignedBed } = req.body;
   if (!['pending', 'confirmed', 'return_ward'].includes(admissionStatus)) return res.status(400).json({ error: 'invalid status' });
+
+  const row = await db.get('SELECT * FROM form_submissions WHERE id = $1', [req.params.id]);
+  if (!row) return res.status(404).json({ error: 'not found' });
+
   await db.run(
     'UPDATE form_submissions SET admission_status=$1, assigned_bed=$2, updated_at=NOW() WHERE id=$3',
     [admissionStatus, assignedBed || null, req.params.id]
   );
+
+  // แจ้งเตือน LINE
+  const { notifyAllApprovers } = require('../lib/line');
+  let msg = '';
+  if (admissionStatus === 'confirmed' && assignedBed) {
+    msg =
+      `✅ ผู้ป่วยเข้า ICU แล้ว\n` +
+      `ผู้ป่วย: ${row.patient_name} (HN: ${row.patient_hn})\n` +
+      `หอผู้ป่วย: ${row.ward}\n` +
+      `🛏️ เตียงที่ได้: ${assignedBed}`;
+  } else if (admissionStatus === 'return_ward') {
+    msg =
+      `🔙 ผู้ป่วยไม่เข้า ICU - กลับ Ward\n` +
+      `ผู้ป่วย: ${row.patient_name} (HN: ${row.patient_hn})\n` +
+      `หอผู้ป่วย: ${row.ward}`;
+  }
+  if (msg) notifyAllApprovers(msg).catch(console.error);
+
   res.json({ ok: true });
 });
 
