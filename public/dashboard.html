@@ -97,6 +97,7 @@
           <button onclick="document.getElementById('dateFilter').value='';renderSubs();" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">✕ ล้าง</button>
         </div>
         <button id="showAllBtn" onclick="toggleShowAll()" style="padding:7px 14px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">📋 แสดงทั้งหมด</button>
+        <button id="statsBtn" onclick="openStats()" style="padding:7px 14px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">📊 สถิติข้อมูล</button>
       </div>
       <div class="table-wrap">
       <table>
@@ -117,6 +118,15 @@
   </div>
 </div>
 
+<!-- modal สถิติข้อมูล -->
+<div class="modal-overlay" id="statsModal">
+  <div class="modal" style="max-width:760px;">
+    <h3>📊 สถิติข้อมูลการจองเตียง ICU</h3>
+    <div id="statsBody"></div>
+    <button class="modal-close" onclick="document.getElementById('statsModal').classList.remove('show')">ปิด</button>
+  </div>
+</div>
+
 <!-- modal จัดการสิทธิ์ -->
 <div class="modal-overlay" id="settingsModal">
   <div class="modal" style="max-width:700px;">
@@ -131,6 +141,7 @@
 
 <script>
 var allSubs = [];
+var allBeds = [];
 
 
 
@@ -171,7 +182,7 @@ document.getElementById('settingsBtn').onclick = function() { document.getElemen
 
 
 // ปิด modal เมื่อคลิกนอก
-['detailModal','settingsModal'].forEach(function(id) {
+['detailModal','settingsModal','statsModal'].forEach(function(id) {
   document.getElementById(id).onclick = function(e) { if(e.target===this) this.classList.remove('show'); };
 });
 
@@ -240,6 +251,7 @@ async function loadAll() {
     var subs = await fetch('/api/form-submissions').then(function(r){return r.json();});
     var users = await fetch('/api/admin/users').then(function(r){return r.json();});
     renderBeds(beds);
+    allBeds = beds;
     allSubs = subs;
 
     // ตรวจจับ: ถ้ามี pending อยู่ → เล่นเสียง, ถ้าไม่มี → หยุด
@@ -424,6 +436,104 @@ function toggleShowAll() {
   btn.style.color = showAll ? '#fff' : '#333';
   btn.textContent = showAll ? '✅ แสดงทั้งหมด' : '📋 แสดงทั้งหมด';
   renderSubs();
+}
+
+function openStats() {
+  var subs = allSubs || [];
+  var total = subs.length;
+
+  // นับตาม key จาก accessor
+  function countBy(fn) {
+    var m = {};
+    subs.forEach(function(r){ var k = fn(r) || '-'; m[k] = (m[k]||0)+1; });
+    return m;
+  }
+  function pct(n){ return total ? Math.round(n/total*100) : 0; }
+
+  // แถวแท่งกราฟ 1 รายการ
+  function bar(label, n, color) {
+    return '<div style="display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px;">'
+      +'<div style="width:150px;flex-shrink:0;color:#444;">'+label+'</div>'
+      +'<div style="flex:1;background:#eee;border-radius:6px;height:16px;overflow:hidden;">'
+        +'<div style="width:'+pct(n)+'%;background:'+color+';height:100%;"></div>'
+      +'</div>'
+      +'<div style="width:70px;flex-shrink:0;text-align:right;font-weight:600;color:#2c3e50;">'+n+' ('+pct(n)+'%)</div>'
+      +'</div>';
+  }
+  // กล่องสรุปด้านบน
+  function card(label, value, color) {
+    return '<div style="flex:1;min-width:110px;background:'+color+';border-radius:10px;padding:12px 14px;color:#fff;">'
+      +'<div style="font-size:26px;font-weight:800;line-height:1;">'+value+'</div>'
+      +'<div style="font-size:12px;opacity:0.9;margin-top:4px;">'+label+'</div>'
+      +'</div>';
+  }
+  // หัวข้อกลุ่ม
+  function head(t){ return '<h4 style="margin:18px 0 6px;font-size:14px;color:#2c3e50;border-left:3px solid #06c755;padding-left:8px;">'+t+'</h4>'; }
+
+  var byUrg = countBy(function(r){return r.urgency||'normal';});
+  var bySt  = countBy(function(r){return r.status||'pending';});
+  var byForm= countBy(function(r){return r.form_type||'-';});
+  var byAdm = countBy(function(r){return r.admission_status||'pending';});
+  var byIcu = countBy(function(r){return r.icu_type||'plan';});
+  var byWard= countBy(function(r){return r.ward||'-';});
+
+  var beds = allBeds || [];
+  var occupied = beds.filter(function(b){return b.status==='occupied';}).length;
+  var pendingCount = bySt['pending'] || 0;
+  var confirmedCount = byAdm['confirmed'] || 0;
+
+  var urgColor = { emergency:'#e74c3c', urgent:'#f39c12', normal:'#27ae60' };
+  var urgLabel = { emergency:'🔴 ฉุกเฉิน (Emergency)', urgent:'🟡 เร่งด่วน (Urgent)', normal:'🟢 ปกติ (Normal)' };
+
+  var html = '';
+  // สรุปด้านบน
+  html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">'
+    + card('คำขอทั้งหมด', total, '#34495e')
+    + card('เตียงที่ใช้งาน', occupied+' / '+beds.length, '#c0392b')
+    + card('รอดำเนินการ', pendingCount, '#b9770e')
+    + card('เข้า ICU แล้ว', confirmedCount, '#1e8449')
+    + '</div>';
+
+  // ตามความเร่งด่วน
+  html += head('ตามความเร่งด่วน');
+  ['emergency','urgent','normal'].forEach(function(k){
+    html += bar(urgLabel[k], byUrg[k]||0, urgColor[k]);
+  });
+
+  // ตามสถานะ
+  html += head('ตามสถานะการดำเนินการ');
+  ['pending','acknowledged','waiting_bed','completed'].forEach(function(k){
+    html += bar(statusLabel[k]||k, bySt[k]||0, statusColor[k]||'#7f8c8d');
+  });
+
+  // ตามประเภทฟอร์ม
+  html += head('ตามประเภทคำขอ');
+  Object.keys(byForm).sort(function(a,b){return byForm[b]-byForm[a];}).forEach(function(k){
+    html += bar(formTypeLabel[k]||k, byForm[k], k==='crisis'?'#e74c3c':'#8e44ad');
+  });
+
+  // ตามสถานะเข้า ICU
+  html += head('ตามสถานะเข้า ICU');
+  ['confirmed','return_ward','pending'].forEach(function(k){
+    html += bar(admLabel[k]||k, byAdm[k]||0, k==='confirmed'?'#1e8449':(k==='return_ward'?'#c0392b':'#b9770e'));
+  });
+
+  // ตาม ICU Type
+  html += head('ตาม ICU Type');
+  ['plan','unplan'].forEach(function(k){
+    html += bar(icuTypeLabel[k]||k, byIcu[k]||0, k==='unplan'?'#e67e22':'#2980b9');
+  });
+
+  // ตามหอผู้ป่วย (เรียงมาก→น้อย)
+  html += head('ตามหอผู้ป่วยต้นทาง');
+  Object.keys(byWard).sort(function(a,b){return byWard[b]-byWard[a];}).forEach(function(k){
+    html += bar(k, byWard[k], '#16a085');
+  });
+
+  if (!total) html = '<p style="color:#999;text-align:center;padding:20px;">ยังไม่มีข้อมูลคำขอ</p>';
+
+  document.getElementById('statsBody').innerHTML = html;
+  document.getElementById('statsModal').classList.add('show');
 }
 
 async function updateStatus(id, sel) {
