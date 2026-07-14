@@ -164,9 +164,11 @@ router.post('/form-submission', async (req, res) => {
   }
   try {
     const row = await db.get(
-      `INSERT INTO form_submissions (form_type, patient_name, patient_hn, ward, diagnosis, icu_type, extra_data)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [formType, patientName || null, patientHn || null, ward || null, diagnosis || null, icuType || null, JSON.stringify(extraData || {})]
+      `INSERT INTO form_submissions (form_type, patient_name, patient_hn, ward, diagnosis, icu_type, urgency, extra_data)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [formType, patientName || null, patientHn || null, ward || null, diagnosis || null, icuType || null,
+       formType === 'crisis' ? 'emergency' : 'normal',
+       JSON.stringify(extraData || {})]
     );
 
     // แจ้งเตือน LINE ทุก approver
@@ -181,8 +183,7 @@ router.post('/form-submission', async (req, res) => {
       `Diagnosis: ${diagnosis || '-'}\n` +
       `ICU Type: ${icuType === 'unplan' ? 'Unplan' : 'Plan'}\n` +
       (extra.booking_date ? `วันที่ต้องการ: ${extra.booking_date}\n` : '') +
-      (extra.emergency && extra.emergency.toLowerCase().includes('yes') ? `⚠️ Emergency!\n` : '') +
-      `\n📋 ดูรายละเอียด: https://booking-icu.onrender.com/dashboard.html`;
+      (extra.emergency && extra.emergency.toLowerCase().includes('yes') ? `⚠️ Emergency!\n` : '');
     notifyAllApprovers(msg).catch(console.error);
 
     res.json({ ok: true, id: row.id });
