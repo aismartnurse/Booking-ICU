@@ -181,6 +181,27 @@ function showApp() {
   setInterval(loadAll, 10000);
 }
 
+var lastSubCount = null;
+
+function playAlert() {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.15, 0.3].forEach(function(delay) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + delay + 0.05);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + delay + 0.2);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.25);
+    });
+  } catch(e) {}
+}
+
 async function loadAll() {
   try {
     var beds = await fetch('/api/beds').then(function(r){return r.json();});
@@ -188,6 +209,12 @@ async function loadAll() {
     var users = await fetch('/api/admin/users').then(function(r){return r.json();});
     renderBeds(beds);
     allSubs = subs;
+
+    // ตรวจจับคำขอใหม่ → เล่นเสียง
+    if (lastSubCount !== null && subs.length > lastSubCount) {
+      playAlert();
+    }
+    lastSubCount = subs.length;
     renderSubs();
     renderUsers(users);
   } catch(e) { console.log('error:', e); }
