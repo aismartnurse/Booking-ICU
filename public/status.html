@@ -190,19 +190,22 @@ async function loadData() {
       pending: '⏳ รอดำเนินการ',
       acknowledged: '✅ รับทราบ รอดำเนินการ',
       waiting_bed: '🟡 รับทราบ รอเตียงว่าง',
-      failed: '❌ คำขอยังไม่สำเร็จ'
+      failed: '❌ คำขอยังไม่สำเร็จ',
+      completed: '🎉 ดำเนินการเสร็จสิ้น',
     };
     const statusColor = {
       pending: '#b9770e',
       acknowledged: '#1e8449',
       waiting_bed: '#b7770d',
-      failed: '#c0392b'
+      failed: '#c0392b',
+      completed: '#1a5276',
     };
     const statusBg = {
       pending: '#fef5e7',
       acknowledged: '#eafaf1',
       waiting_bed: '#fef9e7',
-      failed: '#fdecea'
+      failed: '#fdecea',
+      completed: '#d6eaf8',
     };
 
     document.getElementById('pendingBody').innerHTML = pending.length
