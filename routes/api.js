@@ -269,14 +269,17 @@ router.put('/form-submissions/:id/status', requireAdmin, async (req, res) => {
   // แจ้ง approver ทุกคน
   notifyAllApprovers(msg).catch(console.error);
 
-  // แจ้งกลับ ward (Line Notify field ใน extra_data)
+  // แจ้งกลับ ward — หา LINE user ที่ชื่อตรงกับ ward ใน form
   try {
-    const extra = typeof row.extra_data === 'string' ? JSON.parse(row.extra_data) : (row.extra_data || {});
-    const wardLineId = extra.line_notify;
-    if (wardLineId && wardLineId.trim().startsWith('U')) {
-      pushText(wardLineId.trim(), msg).catch(console.error);
+    const wardName = (row.ward || '').toLowerCase().replace(/\s/g, '');
+    const users = await db.all("SELECT line_user_id, display_name FROM users WHERE role = 'requester'");
+    for (const u of users) {
+      const name = (u.display_name || '').toLowerCase().replace(/\s/g, '');
+      if (name && wardName && wardName.includes(name.replace('ward','')||'') || name.includes(wardName)) {
+        pushText(u.line_user_id, msg).catch(console.error);
+      }
     }
-  } catch(e) {}
+  } catch(e) { console.error('ward notify error:', e.message); }
 
   res.json({ ok: true });
 });
@@ -323,14 +326,17 @@ router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => 
   }
   if (msg) {
     notifyAllApprovers(msg).catch(console.error);
-    // ส่งกลับ ward
+    // แจ้งกลับ ward
     try {
-      const extra = typeof row.extra_data === 'string' ? JSON.parse(row.extra_data) : (row.extra_data || {});
-      const wardLineId = extra.line_notify;
-      if (wardLineId && wardLineId.trim().startsWith('U')) {
-        pushText(wardLineId.trim(), msg).catch(console.error);
+      const wardName = (row.ward || '').toLowerCase().replace(/\s/g, '');
+      const users = await db.all("SELECT line_user_id, display_name FROM users WHERE role = 'requester'");
+      for (const u of users) {
+        const name = (u.display_name || '').toLowerCase().replace(/\s/g, '');
+        if (name && wardName && wardName.includes(name.replace('ward','')||'') || name.includes(wardName)) {
+          pushText(u.line_user_id, msg).catch(console.error);
+        }
       }
-    } catch(e) {}
+    } catch(e) { console.error('ward notify error:', e.message); }
   }
 
   res.json({ ok: true });
