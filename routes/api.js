@@ -265,9 +265,12 @@ router.put('/form-submissions/:id/urgency', requireAdmin, async (req, res) => {
 });
 
 router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => {
-  const { admissionStatus } = req.body;
+  const { admissionStatus, assignedBed } = req.body;
   if (!['pending', 'confirmed', 'return_ward'].includes(admissionStatus)) return res.status(400).json({ error: 'invalid status' });
-  await db.run('UPDATE form_submissions SET admission_status=$1, updated_at=NOW() WHERE id=$2', [admissionStatus, req.params.id]);
+  await db.run(
+    'UPDATE form_submissions SET admission_status=$1, assigned_bed=$2, updated_at=NOW() WHERE id=$3',
+    [admissionStatus, assignedBed || null, req.params.id]
+  );
   res.json({ ok: true });
 });
 
