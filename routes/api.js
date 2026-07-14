@@ -224,7 +224,7 @@ router.put('/form-submissions/:id/icu-type', requireAdmin, async (req, res) => {
 
 router.put('/form-submissions/:id/status', requireAdmin, async (req, res) => {
   const { status } = req.body;
-  if (!['pending','acknowledged','waiting_bed','failed'].includes(status)) return res.status(400).json({ error: 'invalid' });
+  if (!['pending','acknowledged','waiting_bed','failed','completed'].includes(status)) return res.status(400).json({ error: 'invalid' });
 
   const row = await db.get('SELECT * FROM form_submissions WHERE id = $1', [req.params.id]);
   if (!row) return res.status(404).json({ error: 'not found' });
