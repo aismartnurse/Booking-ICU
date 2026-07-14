@@ -329,7 +329,7 @@ function renderSubs() {
   });
 
   if (!rows.length) {
-    document.getElementById('subBody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;">ไม่มีรายการ</td></tr>';
+    document.getElementById('subBody').innerHTML='<tr><td colspan="9" style="text-align:center;color:#999;padding:20px;">ไม่มีรายการ</td></tr>';
     return;
   }
 
@@ -371,6 +371,7 @@ function renderSubs() {
 
     return '<tr style="background:'+bg+';">'
       +'<td style="font-size:11px;color:#555;">'+sentDate+'</td>'
+      +'<td style="cursor:pointer;" onclick="showDetail('+r.id+')"><strong style="color:#2c3e50;">'+(r.patient_name||'-')+'</strong><br><small style="font-size:11px;color:#888;">HN: '+(r.patient_hn||'-')+'</small></td>'
       +'<td>'+(r.ward||'-')+'</td>'
       +'<td><span class="badge '+(r.form_type||'')+'">'+(formTypeLabel[r.form_type]||r.form_type||'-')+'</span></td>'
       +'<td style="font-weight:600;color:#2c3e50;">'+bookingDate+'</td>'
