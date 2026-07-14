@@ -140,18 +140,21 @@ var statusLabel = {
   pending: '⏳ รอดำเนินการ',
   acknowledged: '✅ รับทราบ รอดำเนินการ',
   waiting_bed: '🟡 รับทราบ รอเตียงว่าง',
+  completed: '🎉 ดำเนินการเสร็จสิ้น',
 };
 var statusColor = {
   pending: '#b9770e',
   acknowledged: '#1e8449',
   waiting_bed: '#b7770d',
-  failed: '#c0392b'
+  failed: '#c0392b',
+  completed: '#1a5276',
 };
 var statusBg = {
   pending: '#fef5e7',
   acknowledged: '#eafaf1',
   waiting_bed: '#fef9e7',
-  failed: '#fdecea'
+  failed: '#fdecea',
+  completed: '#d6eaf8',
 };
 var fieldLabels = { doctor:'แพทย์ผู้ผ่าตัด', surgery_name:'ชื่อการผ่าตัด', booking_date:'วันที่ต้องการจอง', system:'ระบบ', sbp:'SBP (mmHg.)', hr:'HR (bpm.)', rr:'RR (bpm.)', temp:'Temp (°C)', sos_score:'SOS score', conscious:'Conscious', urine:'ปริมาณปัสสาวะ/8hrs', reason:'เรื่องที่ต้องการจอง' };
 
@@ -261,10 +264,10 @@ function renderBeds(beds) {
   document.getElementById('bedsGrid').innerHTML = beds.map(function(b) {
     var pt = patientMap[b.label];
     var info = (b.status === 'occupied' && pt)
-      ? '<small style="font-size:12px;font-weight:700;margin-top:6px;display:block;">'+pt.name+'</small>'
-        +'<small style="font-size:11px;opacity:0.9;font-weight:500;">HN: '+pt.hn+'</small>'
-      : '<small>'+bedStatusLabel[b.status]+'</small>';
-    return '<div class="bed '+b.status+'" onclick="cycleBed('+b.id+',\''+b.status+'\')" style="min-height:70px;">'+b.label+info+'</div>';
+      ? '<small style="font-size:13px;font-weight:700;margin-top:4px;display:block;line-height:1.3;">'+pt.name+'</small>'
+        +'<small style="font-size:10px;opacity:0.85;font-weight:400;">HN: '+pt.hn+'</small>'
+      : '<small style="font-size:12px;">'+bedStatusLabel[b.status]+'</small>';
+    return '<div class="bed '+b.status+'" onclick="cycleBed('+b.id+',\''+b.status+'\')" style="min-height:80px;font-size:14px;">'+b.label+info+'</div>';
   }).join('');
 }
 
@@ -343,6 +346,7 @@ function renderSubs() {
       +'<option value="pending"'+(st==='pending'?' selected':'')+'>⏳ รอดำเนินการ</option>'
       +'<option value="acknowledged"'+(st==='acknowledged'?' selected':'')+'>✅ รับทราบ รอดำเนินการ</option>'
       +'<option value="waiting_bed"'+(st==='waiting_bed'?' selected':'')+'>🟡 รับทราบ รอเตียงว่าง</option>'
+      +'<option value="completed"'+(st==='completed'?' selected':'')+'>🎉 ดำเนินการเสร็จสิ้น</option>'
       +'</select>';
 
     // ICU Type editable
@@ -492,7 +496,7 @@ async function showDetail(id) {
   var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
 
   // Emergency badge มุมขวาบน
-  var emergencyBadge = extra.emergency
+  var emergencyBadge = (extra.emergency && extra.emergency.toLowerCase().includes('yes'))
     ? '<span style="position:absolute;top:16px;right:50px;background:#e74c3c;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">🚨 Emer</span>'
     : '';
   document.getElementById('detailTitle').innerHTML = (r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')'+emergencyBadge;
