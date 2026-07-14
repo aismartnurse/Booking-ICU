@@ -99,6 +99,14 @@ async function initDB() {
     "ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS decision_note TEXT",
     "ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS approver_line_id TEXT",
     "ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW()",
+    // เปลี่ยนชื่อเตียงจาก ICU-0X เป็น 1-7
+    "UPDATE beds SET label='1' WHERE label='ICU-01'",
+    "UPDATE beds SET label='2' WHERE label='ICU-02'",
+    "UPDATE beds SET label='3' WHERE label='ICU-03'",
+    "UPDATE beds SET label='4' WHERE label='ICU-04'",
+    "UPDATE beds SET label='5' WHERE label='ICU-05'",
+    "UPDATE beds SET label='6' WHERE label='ICU-06'",
+    "UPDATE beds SET label='7' WHERE label='ICU-07'",
   ];
   for (const sql of migrations) {
     try { await pool.query(sql); } catch (e) { /* ignore */ }
