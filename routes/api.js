@@ -249,22 +249,34 @@ router.put('/form-submissions/:id/status', requireAdmin, async (req, res) => {
 
   await db.run('UPDATE form_submissions SET status=$1, updated_at=NOW() WHERE id=$2', [status, req.params.id]);
 
-  // ส่ง LINE แจ้งเตือนทุก approver
   const statusLabel = {
     pending: '⏳ รอดำเนินการ',
     acknowledged: '✅ รับทราบ รอดำเนินการ',
     waiting_bed: '🟡 รับทราบ รอเตียงว่าง',
-    failed: '❌ คำขอยังไม่สำเร็จ'
+    failed: '❌ คำขอยังไม่สำเร็จ',
+    completed: '🎉 ดำเนินการเสร็จสิ้น',
   };
+
   const msg =
     `🔔 อัปเดตสถานะคำขอ ICU\n` +
     `ผู้ป่วย: ${row.patient_name} (HN: ${row.patient_hn})\n` +
     `หอผู้ป่วย: ${row.ward}\n` +
     `ประเภท: ${row.form_type === 'or' ? 'ICU for OR' : 'ICU Crisis'}\n` +
-    `สถานะใหม่: ${statusLabel[status]}`;
+    `สถานะใหม่: ${statusLabel[status] || status}`;
 
-  const { notifyAllApprovers } = require('../lib/line');
+  const { notifyAllApprovers, pushText } = require('../lib/line');
+
+  // แจ้ง approver ทุกคน
   notifyAllApprovers(msg).catch(console.error);
+
+  // แจ้งกลับ ward (Line Notify field ใน extra_data)
+  try {
+    const extra = typeof row.extra_data === 'string' ? JSON.parse(row.extra_data) : (row.extra_data || {});
+    const wardLineId = extra.line_notify;
+    if (wardLineId && wardLineId.trim().startsWith('U')) {
+      pushText(wardLineId.trim(), msg).catch(console.error);
+    }
+  } catch(e) {}
 
   res.json({ ok: true });
 });
@@ -295,7 +307,7 @@ router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => 
   );
 
   // แจ้งเตือน LINE
-  const { notifyAllApprovers } = require('../lib/line');
+  const { notifyAllApprovers, pushText } = require('../lib/line');
   let msg = '';
   if (admissionStatus === 'confirmed' && assignedBed) {
     msg =
@@ -309,7 +321,17 @@ router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => 
       `ผู้ป่วย: ${row.patient_name} (HN: ${row.patient_hn})\n` +
       `หอผู้ป่วย: ${row.ward}`;
   }
-  if (msg) notifyAllApprovers(msg).catch(console.error);
+  if (msg) {
+    notifyAllApprovers(msg).catch(console.error);
+    // ส่งกลับ ward
+    try {
+      const extra = typeof row.extra_data === 'string' ? JSON.parse(row.extra_data) : (row.extra_data || {});
+      const wardLineId = extra.line_notify;
+      if (wardLineId && wardLineId.trim().startsWith('U')) {
+        pushText(wardLineId.trim(), msg).catch(console.error);
+      }
+    } catch(e) {}
+  }
 
   res.json({ ok: true });
 });
