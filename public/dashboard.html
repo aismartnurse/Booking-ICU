@@ -11,7 +11,7 @@
   header .btns { display:flex; gap:8px; }
   main { max-width:1300px; margin:0 auto; padding:24px; }
   .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:10px; margin-bottom:24px; }
-  .bed { border-radius:10px; padding:14px 8px; text-align:center; color:#fff; font-weight:700; cursor:pointer; }
+  .bed { border-radius:10px; padding:14px 8px; text-align:center; color:#fff; font-weight:700; cursor:pointer; font-size:18px; min-height:80px; display:flex; flex-direction:column; justify-content:center; align-items:center; }
   .bed.available { background:#27ae60; }
   .bed.occupied { background:#c0392b; }
   .bed.cleaning { background:#f39c12; }
@@ -205,8 +205,8 @@ function renderBeds(beds) {
   document.getElementById('bedsGrid').innerHTML = beds.map(function(b) {
     var pt = patientMap[b.label];
     var info = (b.status === 'occupied' && pt)
-      ? '<small style="font-size:10px;font-weight:600;margin-top:4px;display:block;">'+pt.name+'</small>'
-        +'<small style="font-size:9px;opacity:0.85;">HN: '+pt.hn+'</small>'
+      ? '<small style="font-size:12px;font-weight:700;margin-top:6px;display:block;">'+pt.name+'</small>'
+        +'<small style="font-size:11px;opacity:0.9;font-weight:500;">HN: '+pt.hn+'</small>'
       : '<small>'+bedStatusLabel[b.status]+'</small>';
     return '<div class="bed '+b.status+'" onclick="cycleBed('+b.id+',\''+b.status+'\')" style="min-height:70px;">'+b.label+info+'</div>';
   }).join('');
