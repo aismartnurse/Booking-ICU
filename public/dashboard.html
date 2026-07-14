@@ -236,18 +236,14 @@ async function loadAll() {
     renderBeds(beds);
     allSubs = subs;
 
-    // ตรวจจับคำขอใหม่ → เริ่มเสียง
-    if (lastSubCount !== null && subs.length > lastSubCount) {
-      playAlert();
-    }
-    lastSubCount = subs.length;
-
-    // เช็คว่ายังมีคำขอที่ status = 'pending' อยู่ไหม
-    // ถ้าไม่มีเลย → หยุดเสียง
+    // ตรวจจับ: ถ้ามี pending อยู่ → เล่นเสียง, ถ้าไม่มี → หยุด
     var hasPending = subs.some(function(r) { return r.status === 'pending'; });
-    if (!hasPending) {
+    if (hasPending) {
+      playAlert();
+    } else {
       stopAlert();
     }
+    lastSubCount = subs.length;
     renderSubs();
     renderUsers(users);
   } catch(e) { console.log('error:', e); }
