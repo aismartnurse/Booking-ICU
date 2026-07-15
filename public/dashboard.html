@@ -481,8 +481,8 @@ function renderUsers(rows) {
       +'<td>'+u.role+'</td>'
       +'<td><select class="role-select" onchange="changeRole('+u.id+',this.value)">'
         +'<option value="pending"'+(u.role==='pending'?' selected':'')+'>pending</option>'
-        +'<option value="requester"'+(u.role==='requester'?' selected':'')+'>requester</option>'
-        +'<option value="approver"'+(u.role==='approver'?' selected':'')+'>approver</option>'
+        +'<option value="requester"'+(u.role==='requester'?' selected':'')+'>requester (ward)</option>'
+        +'<option value="approver"'+(u.role==='approver'?' selected':'')+'>Approve (ICU)</option>'
       +'</select></td></tr>';
   }).join('');
 }
