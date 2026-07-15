@@ -129,7 +129,7 @@ var bedStatusLabel = { available:'ว่าง', occupied:'มีผู้ป่
 var nextStatus = { available:'occupied', occupied:'cleaning', cleaning:'available', closed:'available' };
 var formTypeLabel = { or:'OR', crisis:'Crisis' };
 var icuTypeLabel = { plan:'📋 Plan', unplan:'🚨 Unplan' };
-var admLabel = { pending:'รอติดตาม', confirmed:'✅ เข้า ICU', return_ward:'❌ ไม่เข้า ICU' };
+var admLabel = { pending:'รอติดตาม', confirmed:'✅ เข้า ICU', return_ward:'❌ ไม่เข้า ICU', discharged:'🏠 ย้ายกลับ Ward' };
 var statusLabel = {
   pending: '⏳ รอดำเนินการ',
   acknowledged: '✅ รับทราบ รอดำเนินการ',
@@ -330,15 +330,18 @@ function renderSubs() {
       +'<td>'+dot+'</td>'
       +'<td>'+stCell+'</td>'
       +'<td>'
-        +'<select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
-          +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
-          +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU</option>'
-          +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>❌ ไม่เข้า ICU</option>'
-        +'</select>'
-        +(adm==='confirmed' && r.assigned_bed
-          ? '<br><span style="font-size:11px;font-weight:700;color:#1e8449;">🛏️ '+r.assigned_bed+'</span>'
-            +' <button onclick="moveBed('+r.id+',\''+r.assigned_bed+'\')" style="font-size:10px;padding:2px 6px;background:#f39c12;color:#fff;border:none;border-radius:4px;cursor:pointer;">ย้ายเตียง</button>'
-          : '')
+        +(adm==='discharged'
+          ? '<span style="font-size:12px;font-weight:700;color:#27ae60;">🏠 ย้ายกลับ '+(extra.destination_ward || 'Ward')+'</span>'
+          : '<select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
+              +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
+              +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU</option>'
+              +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>❌ ไม่เข้า ICU</option>'
+            +'</select>'
+            +(adm==='confirmed' && r.assigned_bed
+              ? '<br><span style="font-size:11px;font-weight:700;color:#1e8449;">🛏️ '+r.assigned_bed+'</span>'
+                +' <button onclick="moveBed('+r.id+',\''+r.assigned_bed+'\')" style="font-size:10px;padding:2px 6px;background:#f39c12;color:#fff;border:none;border-radius:4px;cursor:pointer;">ย้ายเตียง</button>'
+                +' <button onclick="moveBackToWard('+r.id+',\''+r.assigned_bed+'\')" style="font-size:10px;padding:2px 6px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer;">ย้ายกลับ ward</button>'
+              : ''))
       +'</td>'
       +'<td>'+icuCell+'</td>'
       +'</tr>';
@@ -399,6 +402,24 @@ async function moveBed(id, currentBed) {
   }
   await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'occupied'})});
   await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:'confirmed', assignedBed:bed.label})});
+  loadAll();
+}
+
+async function moveBackToWard(id, currentBed) {
+  var sub = allSubs.find(function(r){return r.id===id;});
+  var name = sub ? (sub.patient_name||'') : '';
+  var originWard = sub ? (sub.ward||'') : '';
+  var wardList = Array.from(new Set(allSubs.map(function(r){return r.ward;}).filter(Boolean)));
+  var dest = prompt('ย้ายผู้ป่วย '+name+' กลับไปที่ ward ใด?\n(เว้นว่าง = ward ต้นทาง "'+originWard+'")\n\nward ที่มีในระบบ: '+wardList.join(', '), originWard);
+  if (dest === null) return;
+  dest = (dest.trim() || originWard);
+  if (!confirm('ยืนยันย้ายผู้ป่วย '+name+' กลับไปที่ '+dest+' เนื่องจากอาการดีขึ้น?\n\nเตียง '+(currentBed||'')+' จะถูกตั้งเป็น “ทำความสะอาด” และแจ้งเตือนไปที่ '+dest)) return;
+  if (currentBed) {
+    var beds = await fetch('/api/beds').then(function(r){return r.json();});
+    var bed = beds.find(function(b){return b.label===currentBed;});
+    if (bed) await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'cleaning'})});
+  }
+  await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:'discharged', assignedBed:null, destinationWard:dest})});
   loadAll();
 }
 
