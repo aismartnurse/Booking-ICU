@@ -36,23 +36,13 @@
   #loginBox button { width:100%; padding:12px; background:#06c755; color:#fff; border:none; border-radius:8px; font-weight:700; margin-top:8px; cursor:pointer; }
   .hdr-btn { background:none; border:1px solid #fff; color:#fff; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:14px; }
   .link-btn { color:#06c755; cursor:pointer; font-weight:600; text-decoration:underline; background:none; border:none; font-size:12px; padding:0; }
-  .tab-bar { display:flex; gap:4px; margin-bottom:12px; }
-  .tab-btn { padding:7px 14px; border:none; border-radius:8px; cursor:pointer; font-size:12px; background:#eee; }
-  .tab-btn.active { background:#06c755; color:#fff; font-weight:700; }
-
-  /* urgency single button */
   .urg-btn { width:28px; height:28px; border-radius:50%; border:2px solid rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.1s; }
   .urg-btn:hover { transform:scale(1.15); }
   .urg-btn.emergency { background:#e74c3c; }
   .urg-btn.urgent { background:#f39c12; }
   .urg-btn.normal { background:#27ae60; }
-
-  /* action dropdown */
   .action-sel { padding:5px 8px; border-radius:6px; border:1px solid #ddd; font-size:12px; cursor:pointer; background:#fff; }
-
   .adm-select { padding:4px 6px; border-radius:6px; border:1px solid #ddd; font-size:11px; cursor:pointer; }
-
-  /* modals */
   .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; }
   .modal-overlay.show { display:flex; }
   .modal { background:#fff; border-radius:14px; padding:24px; max-width:500px; width:92%; max-height:85vh; overflow-y:auto; position:relative; }
@@ -78,6 +68,7 @@
     <h1>🏥 ICU Bed Dashboard</h1>
     <div class="btns">
       <button id="soundBtn" class="hdr-btn" onclick="unlockAudio()">🔕 เปิดเสียง</button>
+      <button class="hdr-btn" onclick="window.open('/analytics.html','_blank')">📊 สถิติ</button>
       <button class="hdr-btn" id="settingsBtn">⚙️ จัดการสิทธิ์</button>
       <button class="hdr-btn" id="logoutBtn">ออกจากระบบ</button>
     </div>
@@ -97,8 +88,6 @@
           <button onclick="document.getElementById('dateFilter').value='';renderSubs();" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">✕ ล้าง</button>
         </div>
         <button id="showAllBtn" onclick="toggleShowAll()" style="padding:7px 14px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">📋 แสดงทั้งหมด</button>
-        <button id="statsBtn" onclick="openStats()" style="padding:7px 14px;border:1px solid #ddd;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;">📊 สถิติข้อมูล</button>
-        <button id="exportBtn" onclick="exportData()" style="padding:7px 14px;border:1px solid #16a085;border-radius:8px;font-size:12px;cursor:pointer;background:#16a085;color:#fff;font-weight:600;">📥 Export CSV</button>
       </div>
       <div class="table-wrap">
       <table>
@@ -119,18 +108,6 @@
   </div>
 </div>
 
-<!-- modal สถิติข้อมูล -->
-<div class="modal-overlay" id="statsModal">
-  <div class="modal" style="max-width:760px;">
-    <h3>📊 สถิติข้อมูลการจองเตียง ICU</h3>
-    <div id="statsBody"></div>
-    <div style="margin-top:14px;display:flex;gap:10px;">
-      <button onclick="exportStats()" style="padding:8px 14px;border:1px solid #16a085;border-radius:8px;font-size:13px;cursor:pointer;background:#16a085;color:#fff;font-weight:600;">⬇️ ดาวน์โหลดสถิติ (CSV)</button>
-    </div>
-    <button class="modal-close" onclick="document.getElementById('statsModal').classList.remove('show')">ปิด</button>
-  </div>
-</div>
-
 <!-- modal จัดการสิทธิ์ -->
 <div class="modal-overlay" id="settingsModal">
   <div class="modal" style="max-width:700px;">
@@ -146,8 +123,7 @@
 <script>
 var allSubs = [];
 var allBeds = [];
-
-
+var showAll = false;
 
 var bedStatusLabel = { available:'ว่าง', occupied:'มีผู้ป่วย', cleaning:'ทำความสะอาด', closed:'ปิดใช้งาน' };
 var nextStatus = { available:'occupied', occupied:'cleaning', cleaning:'available', closed:'available' };
@@ -161,20 +137,13 @@ var statusLabel = {
   completed: '🎉 ดำเนินการเสร็จสิ้น',
 };
 var statusColor = {
-  pending: '#b9770e',
-  acknowledged: '#1e8449',
-  waiting_bed: '#b7770d',
-  failed: '#c0392b',
-  completed: '#1a5276',
+  pending: '#b9770e', acknowledged: '#1e8449', waiting_bed: '#b7770d',
+  failed: '#c0392b', completed: '#1a5276',
 };
 var statusBg = {
-  pending: '#fef5e7',
-  acknowledged: '#eafaf1',
-  waiting_bed: '#fef9e7',
-  failed: '#fdecea',
-  completed: '#d6eaf8',
+  pending: '#fef5e7', acknowledged: '#eafaf1', waiting_bed: '#fef9e7',
+  failed: '#fdecea', completed: '#d6eaf8',
 };
-var fieldLabels = { doctor:'แพทย์ผู้ผ่าตัด', surgery_name:'ชื่อการผ่าตัด', booking_date:'วันที่ต้องการจอง', system:'ระบบ', sbp:'SBP (mmHg.)', hr:'HR (bpm.)', rr:'RR (bpm.)', temp:'Temp (°C)', sos_score:'SOS score', conscious:'Conscious', urine:'ปริมาณปัสสาวะ/8hrs', reason:'เรื่องที่ต้องการจอง' };
 
 document.getElementById('loginBtn').onclick = async function() {
   var res = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:document.getElementById('un').value, password:document.getElementById('pw').value}) });
@@ -183,10 +152,7 @@ document.getElementById('loginBtn').onclick = async function() {
 document.getElementById('logoutBtn').onclick = async function() { await fetch('/api/admin/logout',{method:'POST'}); location.reload(); };
 document.getElementById('settingsBtn').onclick = function() { document.getElementById('settingsModal').classList.add('show'); };
 
-
-
-// ปิด modal เมื่อคลิกนอก
-['detailModal','settingsModal','statsModal'].forEach(function(id) {
+['detailModal','settingsModal'].forEach(function(id) {
   document.getElementById(id).onclick = function(e) { if(e.target===this) this.classList.remove('show'); };
 });
 
@@ -239,52 +205,36 @@ function beep() {
   });
 }
 
-function playAlert() {
-  if (alertInterval) return;
-  beep();
-  alertInterval = setInterval(beep, 650);
-}
-
-function stopAlert() {
-  if (alertInterval) { clearInterval(alertInterval); alertInterval = null; }
-}
+function playAlert() { if (alertInterval) return; beep(); alertInterval = setInterval(beep, 650); }
+function stopAlert() { if (alertInterval) { clearInterval(alertInterval); alertInterval = null; } }
 
 async function loadAll() {
   try {
     var beds = await fetch('/api/beds').then(function(r){return r.json();});
     var subs = await fetch('/api/form-submissions').then(function(r){return r.json();});
     var users = await fetch('/api/admin/users').then(function(r){return r.json();});
-    renderBeds(beds);
     allBeds = beds;
     allSubs = subs;
-
-    // ตรวจจับ: ถ้ามี pending อยู่ → เล่นเสียง, ถ้าไม่มี → หยุด
     var hasPending = subs.some(function(r) { return r.status === 'pending'; });
-    if (hasPending) {
-      playAlert();
-    } else {
-      stopAlert();
-    }
+    if (hasPending) { playAlert(); } else { stopAlert(); }
     lastSubCount = subs.length;
+    renderBeds(beds);
     renderSubs();
     renderUsers(users);
   } catch(e) { console.log('error:', e); }
 }
 
 function renderBeds(beds) {
-  // หาผู้ป่วยที่เข้า ICU แล้วจับคู่กับเตียง
   var patientMap = {};
   allSubs.forEach(function(s) {
     if (s.admission_status === 'confirmed' && s.assigned_bed) {
       patientMap[s.assigned_bed] = { name: s.patient_name || '-', hn: s.patient_hn || '-' };
     }
   });
-
   document.getElementById('bedsGrid').innerHTML = beds.map(function(b) {
     var pt = patientMap[b.label];
     var info = (b.status === 'occupied' && pt)
-      ? '<small style="font-size:13px;font-weight:700;margin-top:4px;display:block;line-height:1.3;">'+pt.name+'</small>'
-        +'<small style="font-size:10px;opacity:0.85;font-weight:400;">HN: '+pt.hn+'</small>'
+      ? '<small style="font-size:13px;font-weight:700;margin-top:4px;display:block;line-height:1.3;">'+pt.name+'</small><small style="font-size:10px;opacity:0.85;font-weight:400;">HN: '+pt.hn+'</small>'
       : '<small style="font-size:12px;">'+bedStatusLabel[b.status]+'</small>';
     return '<div class="bed '+b.status+'" onclick="cycleBed('+b.id+',\''+b.status+'\')" style="min-height:80px;font-size:14px;">'+b.label+info+'</div>';
   }).join('');
@@ -297,20 +247,23 @@ async function cycleBed(id, cur) {
   loadAll();
 }
 
+function toggleShowAll() {
+  showAll = !showAll;
+  var btn = document.getElementById('showAllBtn');
+  btn.style.background = showAll ? '#06c755' : '#fff';
+  btn.style.color = showAll ? '#fff' : '#333';
+  btn.textContent = showAll ? '✅ แสดงทั้งหมด' : '📋 แสดงทั้งหมด';
+  renderSubs();
+}
+
 function renderSubs() {
   var search = (document.getElementById('searchInput').value||'').toLowerCase();
-  var dateFilter = document.getElementById('dateFilter').value; // YYYY-MM-DD
-
+  var dateFilter = document.getElementById('dateFilter').value;
   var rows = allSubs;
 
-  // กรองตาม showAll - ถ้าไม่ showAll จะแสดงเฉพาะ รอติดตาม
   if (!showAll) {
-    rows = rows.filter(function(r) {
-      return (r.admission_status || 'pending') === 'pending';
-    });
+    rows = rows.filter(function(r) { return (r.admission_status || 'pending') === 'pending'; });
   }
-
-  // กรองตาม search
   if (search) {
     rows = rows.filter(function(r) {
       return (r.patient_name||'').toLowerCase().includes(search)
@@ -318,8 +271,6 @@ function renderSubs() {
           || (r.ward||'').toLowerCase().includes(search);
     });
   }
-
-  // กรองตามวันที่จอง (booking_date จาก extra_data)
   if (dateFilter) {
     rows = rows.filter(function(r) {
       var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
@@ -330,13 +281,11 @@ function renderSubs() {
         var d, m, y;
         if (bd.includes('/')) { d=parts[0]; m=parts[1]; y=parts[2]; }
         else { y=parts[0]; m=parts[1]; d=parts[2]; }
-        var bdFormatted = y.padStart(4,'0')+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0');
-        return bdFormatted === dateFilter;
+        return y.padStart(4,'0')+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0') === dateFilter;
       } catch(e) { return false; }
     });
   }
 
-  // เรียงตามความเร่งด่วน: แดง → เหลือง → เขียว (ทำหลัง filter)
   var urgOrder = { emergency: 0, urgent: 1, normal: 2 };
   rows = rows.slice().sort(function(a, b) {
     var ua = urgOrder[a.urgency] !== undefined ? urgOrder[a.urgency] : 2;
@@ -349,13 +298,7 @@ function renderSubs() {
     return;
   }
 
-  var rowBg = {
-    pending: '#fffdf5',
-    acknowledged: '#f0fff4',
-    waiting_bed: '#fffde7',
-    completed: '#e8f4fd',
-    failed: '#fff5f5',
-  };
+  var rowBg = { pending:'#fffdf5', acknowledged:'#f0fff4', waiting_bed:'#fffde7', completed:'#e8f4fd', failed:'#fff5f5' };
 
   document.getElementById('subBody').innerHTML = rows.map(function(r) {
     var urg = r.urgency||'normal';
@@ -364,25 +307,18 @@ function renderSubs() {
     var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
     var bookingDate = extra.booking_date || '-';
     var bg = rowBg[st] || '#fff';
-
     var urgNext = {normal:'urgent', urgent:'emergency', emergency:'normal'};
     var dot = '<button class="urg-btn '+urg+'" title="คลิกเปลี่ยน" onclick="updateUrg('+r.id+',\''+urgNext[urg]+'\')"></button>';
-
-    // สถานะ dropdown ใหม่
-    var st = r.status||'pending';
     var stCell = '<select class="action-sel" onchange="updateStatus('+r.id+',this)" style="border-color:'+(statusColor[st]||'#ddd')+';color:'+(statusColor[st]||'#333')+';background:'+(statusBg[st]||'#fff')+';font-weight:600;">'
       +'<option value="pending"'+(st==='pending'?' selected':'')+'>⏳ รอดำเนินการ</option>'
       +'<option value="acknowledged"'+(st==='acknowledged'?' selected':'')+'>✅ รับทราบ รอดำเนินการ</option>'
       +'<option value="waiting_bed"'+(st==='waiting_bed'?' selected':'')+'>🟡 รับทราบ รอเตียงว่าง</option>'
       +'<option value="completed"'+(st==='completed'?' selected':'')+'>🎉 ดำเนินการเสร็จสิ้น</option>'
       +'</select>';
-
-    // ICU Type editable
     var icuCell = '<select class="adm-select" onchange="updateIcuType('+r.id+',this.value)">'
       +'<option value="plan"'+(r.icu_type==='plan'?' selected':'')+'>📋 Plan</option>'
       +'<option value="unplan"'+(r.icu_type==='unplan'?' selected':'')+'>🚨 Unplan</option>'
       +'</select>';
-
     var sentDate = new Date(r.submitted_at).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
 
     return '<tr style="background:'+bg+';">'
@@ -409,218 +345,9 @@ function renderSubs() {
   }).join('');
 }
 
-async function handleAction(id, sel) {
-  var decision = sel.value;
-  if (!decision) return;
-  sel.value = '';
-  var assignedBed=null, note='';
-  if (decision==='approved') {
-    var beds = await fetch('/api/beds').then(function(r){return r.json();});
-    var avail = beds.filter(function(b){return b.status==='available';});
-    if (!avail.length) { alert('ไม่มีเตียงว่าง'); return; }
-    assignedBed = prompt('เลือกเตียง:\n'+avail.map(function(b){return b.label;}).join(', ')+'\n\nพิมพ์ชื่อเตียง:');
-    if (!assignedBed) return;
-    var bed = avail.find(function(b){return b.label===assignedBed.trim();});
-    if (!bed) { alert('ชื่อเตียงไม่ถูกต้อง'); return; }
-    note = prompt('หมายเหตุ (ถ้ามี):') || '';
-    await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'occupied'})});
-  } else {
-    note = prompt('ระบุเหตุผลที่ปฏิเสธ:') || '';
-  }
-  await fetch('/api/form-submissions/'+id+'/decision', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({decision:decision,assignedBed:assignedBed,note:note})});
-  loadAll();
-}
-
-var showAll = false;
-
-function toggleShowAll() {
-  showAll = !showAll;
-  var btn = document.getElementById('showAllBtn');
-  btn.style.background = showAll ? '#06c755' : '#fff';
-  btn.style.color = showAll ? '#fff' : '#333';
-  btn.textContent = showAll ? '✅ แสดงทั้งหมด' : '📋 แสดงทั้งหมด';
-  renderSubs();
-}
-
-function openStats() {
-  var subs = allSubs || [];
-  var total = subs.length;
-
-  // นับตาม key จาก accessor
-  function countBy(fn) {
-    var m = {};
-    subs.forEach(function(r){ var k = fn(r) || '-'; m[k] = (m[k]||0)+1; });
-    return m;
-  }
-  function pct(n){ return total ? Math.round(n/total*100) : 0; }
-
-  // แถวแท่งกราฟ 1 รายการ
-  function bar(label, n, color) {
-    return '<div style="display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px;">'
-      +'<div style="width:150px;flex-shrink:0;color:#444;">'+label+'</div>'
-      +'<div style="flex:1;background:#eee;border-radius:6px;height:16px;overflow:hidden;">'
-        +'<div style="width:'+pct(n)+'%;background:'+color+';height:100%;"></div>'
-      +'</div>'
-      +'<div style="width:70px;flex-shrink:0;text-align:right;font-weight:600;color:#2c3e50;">'+n+' ('+pct(n)+'%)</div>'
-      +'</div>';
-  }
-  // กล่องสรุปด้านบน
-  function card(label, value, color) {
-    return '<div style="flex:1;min-width:110px;background:'+color+';border-radius:10px;padding:12px 14px;color:#fff;">'
-      +'<div style="font-size:26px;font-weight:800;line-height:1;">'+value+'</div>'
-      +'<div style="font-size:12px;opacity:0.9;margin-top:4px;">'+label+'</div>'
-      +'</div>';
-  }
-  // หัวข้อกลุ่ม
-  function head(t){ return '<h4 style="margin:18px 0 6px;font-size:14px;color:#2c3e50;border-left:3px solid #06c755;padding-left:8px;">'+t+'</h4>'; }
-
-  var byUrg = countBy(function(r){return r.urgency||'normal';});
-  var bySt  = countBy(function(r){return r.status||'pending';});
-  var byForm= countBy(function(r){return r.form_type||'-';});
-  var byAdm = countBy(function(r){return r.admission_status||'pending';});
-  var byIcu = countBy(function(r){return r.icu_type||'plan';});
-  var byWard= countBy(function(r){return r.ward||'-';});
-
-  var beds = allBeds || [];
-  var occupied = beds.filter(function(b){return b.status==='occupied';}).length;
-  var pendingCount = bySt['pending'] || 0;
-  var confirmedCount = byAdm['confirmed'] || 0;
-
-  var urgColor = { emergency:'#e74c3c', urgent:'#f39c12', normal:'#27ae60' };
-  var urgLabel = { emergency:'🔴 ฉุกเฉิน (Emergency)', urgent:'🟡 เร่งด่วน (Urgent)', normal:'🟢 ปกติ (Normal)' };
-
-  var html = '';
-  // สรุปด้านบน
-  html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">'
-    + card('คำขอทั้งหมด', total, '#34495e')
-    + card('เตียงที่ใช้งาน', occupied+' / '+beds.length, '#c0392b')
-    + card('รอดำเนินการ', pendingCount, '#b9770e')
-    + card('เข้า ICU แล้ว', confirmedCount, '#1e8449')
-    + '</div>';
-
-  // ตามความเร่งด่วน
-  html += head('ตามความเร่งด่วน');
-  ['emergency','urgent','normal'].forEach(function(k){
-    html += bar(urgLabel[k], byUrg[k]||0, urgColor[k]);
-  });
-
-  // ตามสถานะ
-  html += head('ตามสถานะการดำเนินการ');
-  ['pending','acknowledged','waiting_bed','completed'].forEach(function(k){
-    html += bar(statusLabel[k]||k, bySt[k]||0, statusColor[k]||'#7f8c8d');
-  });
-
-  // ตามประเภทฟอร์ม
-  html += head('ตามประเภทคำขอ');
-  Object.keys(byForm).sort(function(a,b){return byForm[b]-byForm[a];}).forEach(function(k){
-    html += bar(formTypeLabel[k]||k, byForm[k], k==='crisis'?'#e74c3c':'#8e44ad');
-  });
-
-  // ตามสถานะเข้า ICU
-  html += head('ตามสถานะเข้า ICU');
-  ['confirmed','return_ward','pending'].forEach(function(k){
-    html += bar(admLabel[k]||k, byAdm[k]||0, k==='confirmed'?'#1e8449':(k==='return_ward'?'#c0392b':'#b9770e'));
-  });
-
-  // ตาม ICU Type
-  html += head('ตาม ICU Type');
-  ['plan','unplan'].forEach(function(k){
-    html += bar(icuTypeLabel[k]||k, byIcu[k]||0, k==='unplan'?'#e67e22':'#2980b9');
-  });
-
-  // ตามหอผู้ป่วย (เรียงมาก→น้อย)
-  html += head('ตามหอผู้ป่วยต้นทาง');
-  Object.keys(byWard).sort(function(a,b){return byWard[b]-byWard[a];}).forEach(function(k){
-    html += bar(k, byWard[k], '#16a085');
-  });
-
-  if (!total) html = '<p style="color:#999;text-align:center;padding:20px;">ยังไม่มีข้อมูลคำขอ</p>';
-
-  document.getElementById('statsBody').innerHTML = html;
-  document.getElementById('statsModal').classList.add('show');
-}
-
-// ---- Export CSV ----
-function csvEscape(v) {
-  v = (v==null ? '' : String(v));
-  if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g,'""') + '"';
-  return v;
-}
-function downloadCSV(filename, rows) {
-  var csv = rows.map(function(r){ return r.map(csvEscape).join(','); }).join('\r\n');
-  var blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'}); // BOM ให้ Excel อ่านไทยถูก
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-}
-function stamp() {
-  var d = new Date(), p = function(n){return String(n).padStart(2,'0');};
-  return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes());
-}
-
-// export ตารางคำขอทั้งหมด
-function exportData() {
-  var subs = allSubs || [];
-  if (!subs.length) { alert('ยังไม่มีข้อมูลให้ export'); return; }
-  var header = ['วันที่ส่งคำขอ','ชื่อผู้ป่วย','HN','หอผู้ป่วย','ประเภท','วันที่ต้องการใช้เตียง',
-    'ความเร่งด่วน','สถานะดำเนินการ','สถานะเข้า ICU','เตียงที่จัด','ICU Type','Diagnosis'];
-  var urgTxt = { emergency:'ฉุกเฉิน', urgent:'เร่งด่วน', normal:'ปกติ' };
-  var stTxt  = { pending:'รอดำเนินการ', acknowledged:'รับทราบ รอดำเนินการ', waiting_bed:'รับทราบ รอเตียงว่าง', completed:'ดำเนินการเสร็จสิ้น' };
-  var admTxt = { pending:'รอติดตาม', confirmed:'เข้า ICU', return_ward:'ไม่เข้า ICU' };
-  var icuTxt = { plan:'Plan', unplan:'Unplan' };
-  var rows = [header];
-  subs.forEach(function(r){
-    var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
-    rows.push([
-      new Date(r.submitted_at).toLocaleString('th-TH'),
-      r.patient_name||'', r.patient_hn||'', r.ward||'',
-      (formTypeLabel[r.form_type]||r.form_type||''),
-      extra.booking_date||'',
-      urgTxt[r.urgency]||r.urgency||'',
-      stTxt[r.status]||r.status||'',
-      admTxt[r.admission_status]||r.admission_status||'',
-      r.assigned_bed||'',
-      icuTxt[r.icu_type]||r.icu_type||'',
-      r.diagnosis||''
-    ]);
-  });
-  downloadCSV('booking-icu-data-'+stamp()+'.csv', rows);
-}
-
-// export สรุปสถิติ (จาก modal)
-function exportStats() {
-  var subs = allSubs || [];
-  if (!subs.length) { alert('ยังไม่มีข้อมูลให้ export'); return; }
-  function countBy(fn){ var m={}; subs.forEach(function(r){var k=fn(r)||'-';m[k]=(m[k]||0)+1;}); return m; }
-  var total = subs.length;
-  var beds = allBeds || [];
-  var occupied = beds.filter(function(b){return b.status==='occupied';}).length;
-  var rows = [['หัวข้อ','รายการ','จำนวน','เปอร์เซ็นต์']];
-  function add(group, m, order, labelMap){
-    var keys = order || Object.keys(m).sort(function(a,b){return m[b]-m[a];});
-    keys.forEach(function(k){
-      var n = m[k]||0;
-      rows.push([group, (labelMap && labelMap[k]) || k, n, (total?Math.round(n/total*100):0)+'%']);
-    });
-  }
-  rows.push(['ภาพรวม','คำขอทั้งหมด',total,'100%']);
-  rows.push(['ภาพรวม','เตียงที่ใช้งาน',occupied+' / '+beds.length,'']);
-  add('ความเร่งด่วน', countBy(function(r){return r.urgency||'normal';}), ['emergency','urgent','normal'], {emergency:'ฉุกเฉิน',urgent:'เร่งด่วน',normal:'ปกติ'});
-  add('สถานะดำเนินการ', countBy(function(r){return r.status||'pending';}), ['pending','acknowledged','waiting_bed','completed'], {pending:'รอดำเนินการ',acknowledged:'รับทราบ รอดำเนินการ',waiting_bed:'รับทราบ รอเตียงว่าง',completed:'ดำเนินการเสร็จสิ้น'});
-  add('ประเภทคำขอ', countBy(function(r){return r.form_type||'-';}), null, formTypeLabel);
-  add('สถานะเข้า ICU', countBy(function(r){return r.admission_status||'pending';}), ['confirmed','return_ward','pending'], {confirmed:'เข้า ICU',return_ward:'ไม่เข้า ICU',pending:'รอติดตาม'});
-  add('ICU Type', countBy(function(r){return r.icu_type||'plan';}), ['plan','unplan'], {plan:'Plan',unplan:'Unplan'});
-  add('หอผู้ป่วยต้นทาง', countBy(function(r){return r.ward||'-';}), null, null);
-  downloadCSV('booking-icu-stats-'+stamp()+'.csv', rows);
-}
-
 async function updateStatus(id, sel) {
   var val = sel.value;
   await fetch('/api/form-submissions/'+id+'/status', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:val})});
-  // ถ้าเปลี่ยนออกจาก pending → เช็คว่ายังมี pending อื่นอยู่ไหม
   if (val !== 'pending') {
     var remaining = allSubs.filter(function(r){ return r.id !== id && r.status === 'pending'; });
     if (remaining.length === 0) stopAlert();
@@ -640,24 +367,16 @@ async function updateUrg(id, val) {
 
 async function updateAdm(id, val) {
   if (val === 'confirmed') {
-    // เลือกเตียงอัตโนมัติ
     var beds = await fetch('/api/beds').then(function(r){return r.json();});
     var avail = beds.filter(function(b){return b.status==='available';});
-    if (!avail.length) {
-      alert('ไม่มีเตียงว่างในขณะนี้');
-      loadAll();
-      return;
-    }
+    if (!avail.length) { alert('ไม่มีเตียงว่างในขณะนี้'); loadAll(); return; }
     var bedName = prompt('เลือกเตียงสำหรับผู้ป่วย:\n'+avail.map(function(b){return b.label;}).join(', ')+'\n\nพิมพ์ชื่อเตียง:');
     if (!bedName) { loadAll(); return; }
     var bed = avail.find(function(b){return b.label===bedName.trim();});
     if (!bed) { alert('ชื่อเตียงไม่ถูกต้อง'); loadAll(); return; }
-    // อัปเดตสถานะเตียงเป็น occupied
     await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'occupied'})});
-    // บันทึก assigned_bed
     await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:'confirmed', assignedBed:bed.label})});
   } else if (val === 'return_ward') {
-    // ถ้าเคยมีเตียง ให้คืนเตียง
     await releaseBedIfAssigned(id);
     await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:'return_ward', assignedBed:null})});
   } else {
@@ -674,12 +393,10 @@ async function moveBed(id, currentBed) {
   if (!bedName) return;
   var bed = avail.find(function(b){return b.label===bedName.trim();});
   if (!bed) { alert('ชื่อเตียงไม่ถูกต้อง'); return; }
-  // คืนเตียงเก่า
   if (currentBed) {
     var oldBed = beds.find(function(b){return b.label===currentBed;});
     if (oldBed) await fetch('/api/admin/beds/'+oldBed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'available'})});
   }
-  // จองเตียงใหม่
   await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'occupied'})});
   await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:'confirmed', assignedBed:bed.label})});
   loadAll();
@@ -697,13 +414,10 @@ async function releaseBedIfAssigned(id) {
 async function showDetail(id) {
   var r = await fetch('/api/form-submissions/'+id).then(function(r){return r.json();});
   var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
-
-  // Emergency badge มุมขวาบน
   var emergencyBadge = (extra.emergency && extra.emergency.toLowerCase().includes('yes'))
     ? '<span style="position:absolute;top:16px;right:50px;background:#e74c3c;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">🚨 Emer</span>'
     : '';
   document.getElementById('detailTitle').innerHTML = (r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')'+emergencyBadge;
-
   var rows=[
     ['เวลาที่ส่ง', new Date(r.submitted_at).toLocaleString('th-TH')],
     ['ประเภท', formTypeLabel[r.form_type]||r.form_type||'-'],
@@ -739,7 +453,6 @@ async function showDetail(id) {
   + '<textarea id="noteInput" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-height:60px;resize:vertical;">'+(r.decision_note||'')+'</textarea>'
   + '<button onclick="saveNote('+id+')" style="padding:8px;background:#06c755;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">💾 บันทึกหมายเหตุ</button>'
   + '</div>';
-
   document.getElementById('detailModal').classList.add('show');
 }
 
@@ -748,24 +461,14 @@ async function deleteSubmission(id) {
   if (pw === null) return;
   if (pw !== '1234') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
   if (!confirm('ยืนยันลบคำขอ #'+id+' ?')) return;
-  var res = await fetch('/api/form-submissions/'+id, {
-    method:'DELETE'
-  });
-  if (res.ok) {
-    document.getElementById('detailModal').classList.remove('show');
-    await loadAll();
-    alert('ลบเรียบร้อยแล้ว');
-  } else {
-    alert('เกิดข้อผิดพลาด ลองใหม่อีกครั้ง');
-  }
+  var res = await fetch('/api/form-submissions/'+id, { method:'DELETE' });
+  if (res.ok) { document.getElementById('detailModal').classList.remove('show'); await loadAll(); alert('ลบเรียบร้อยแล้ว'); }
+  else { alert('เกิดข้อผิดพลาด ลองใหม่อีกครั้ง'); }
 }
 
 async function saveNote(id) {
   var note = document.getElementById('noteInput').value;
-  await fetch('/api/form-submissions/'+id+'/note', {
-    method:'PUT', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({note:note})
-  });
+  await fetch('/api/form-submissions/'+id+'/note', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({note:note}) });
   alert('บันทึกเรียบร้อย');
   loadAll();
 }
