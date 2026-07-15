@@ -162,7 +162,16 @@ document.getElementById('loginBtn').onclick = async function() {
   if (res.ok) { showApp(); } else { document.getElementById('loginErr').textContent = 'username หรือ password ไม่ถูกต้อง'; }
 };
 document.getElementById('logoutBtn').onclick = async function() { await fetch('/api/admin/logout',{method:'POST'}); location.reload(); };
-document.getElementById('settingsBtn').onclick = function() { document.getElementById('settingsModal').classList.add('show'); };
+var settingsUnlocked = false;
+document.getElementById('settingsBtn').onclick = function() {
+  if (!settingsUnlocked) {
+    var pw = prompt('ใส่รหัสผ่านเพื่อเข้าหน้าจัดการสิทธิ์:');
+    if (pw === null) return;                       // กดยกเลิก
+    if (pw !== 'Nci1234') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
+    settingsUnlocked = true;                        // ปลดล็อกไว้จนกว่าจะรีเฟรชหน้า
+  }
+  document.getElementById('settingsModal').classList.add('show');
+};
 
 ['detailModal','settingsModal'].forEach(function(id) {
   document.getElementById(id).onclick = function(e) { if(e.target===this) this.classList.remove('show'); };
