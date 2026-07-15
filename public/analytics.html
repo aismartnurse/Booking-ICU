@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ICU Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", sans-serif; background: #f0f4f8; color: #1a1a2e; }
+  header { background: linear-gradient(135deg, #06c755, #04a844); color: #fff; padding: 20px 32px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 22px; font-weight: 700; }
+  header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .hdr-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  main { max-width: 1300px; margin: 0 auto; padding: 28px 24px; }
+
+  /* Summary Cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .card { background: #fff; border-radius: 14px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .card .num { font-size: 36px; font-weight: 800; margin-bottom: 6px; }
+  .card .lbl { font-size: 12px; color: #666; }
+  .card.green .num { color: #06c755; }
+  .card.red .num { color: #e74c3c; }
+  .card.orange .num { color: #f39c12; }
+  .card.blue .num { color: #2980b9; }
+  .card.purple .num { color: #8e44ad; }
+  .card.teal .num { color: #16a085; }
+
+  /* Charts Grid */
+  .charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; margin-bottom: 28px; }
+  .chart-box { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .chart-box h3 { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
+  .chart-container { position: relative; height: 220px; }
+
+  /* Table */
+  .table-box { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; }
+  .table-box h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f8f9fa; padding: 10px 12px; text-align: left; color: #555; font-weight: 600; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; }
+  tr:last-child td { border-bottom: none; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+  /* Filter */
+  .filters { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .filters select, .filters input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; }
+  .filters label { font-size: 13px; color: #555; }
+  .print-btn { margin-left: auto; background: #2980b9; color: #fff; border: none; padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+
+  #loginBox { max-width: 320px; margin: 80px auto; background: #fff; padding: 28px; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+  #loginBox h2 { margin-bottom: 16px; font-size: 18px; }
+  #loginBox input { width: 100%; padding: 10px; margin: 6px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+  #loginBox button { width: 100%; padding: 12px; background: #06c755; color: #fff; border: none; border-radius: 8px; font-weight: 700; margin-top: 8px; cursor: pointer; font-size: 14px; }
+  .err { color: red; font-size: 13px; margin-top: 8px; }
+
+  @media print {
+    header .hdr-btn, .filters .print-btn { display: none; }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loginBox">
+  <h2>📊 ICU Analytics</h2>
+  <input id="un" placeholder="Username"/>
+  <input id="pw" type="password" placeholder="Password"/>
+  <button onclick="doLogin()">เข้าสู่ระบบ</button>
+  <div class="err" id="err"></div>
+</div>
+
+<div id="app" style="display:none;">
+<header>
+  <div>
+    <h1>📊 ICU Analytics Dashboard</h1>
+    <p id="subtitle">สถิติข้อมูลคำขอจองเตียง ICU</p>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button class="hdr-btn" onclick="loadData()">🔄 รีเฟรช</button>
+    <button class="hdr-btn" onclick="window.print()">🖨️ พิมพ์ / Export PDF</button>
+    <button class="hdr-btn" onclick="location.href='/dashboard.html'">← Dashboard</button>
+  </div>
+</header>
+
+<main>
+  <div class="filters">
+    <label>ช่วงเวลา:</label>
+    <select id="rangeFilter" onchange="applyFilter()">
+      <option value="all">ทั้งหมด</option>
+      <option value="7">7 วันล่าสุด</option>
+      <option value="30">30 วันล่าสุด</option>
+      <option value="90">90 วันล่าสุด</option>
+    </select>
+    <label>ประเภท:</label>
+    <select id="typeFilter" onchange="applyFilter()">
+      <option value="all">ทั้งหมด</option>
+      <option value="or">ICU for OR</option>
+      <option value="crisis">ICU Crisis</option>
+    </select>
+    <label>หอผู้ป่วย:</label>
+    <select id="wardFilter" onchange="applyFilter()">
+      <option value="all">ทั้งหมด</option>
+    </select>
+  </div>
+
+  <div class="cards" id="summaryCards"></div>
+
+  <div class="charts">
+    <div class="chart-box">
+      <h3>📋 ประเภทคำขอ (OR vs Crisis)</h3>
+      <div class="chart-container"><canvas id="chartType"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>🔴 ความเร่งด่วน</h3>
+      <div class="chart-container"><canvas id="chartUrgency"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>📊 สถานะดำเนินการ</h3>
+      <div class="chart-container"><canvas id="chartStatus"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>🏥 สถานะเข้า ICU</h3>
+      <div class="chart-container"><canvas id="chartAdmission"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>🏨 คำขอแยกตามหอผู้ป่วย</h3>
+      <div class="chart-container"><canvas id="chartWard"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>📋 ICU Type (Plan vs Unplan)</h3>
+      <div class="chart-container"><canvas id="chartIcuType"></canvas></div>
+    </div>
+  </div>
+
+  <div class="table-box">
+    <h3>📈 สถิติแยกตามหอผู้ป่วย</h3>
+    <table>
+      <thead><tr><th>หอผู้ป่วย</th><th>คำขอทั้งหมด</th><th>OR</th><th>Crisis</th><th>เข้า ICU</th><th>ไม่เข้า ICU</th><th>เสร็จสิ้น</th></tr></thead>
+      <tbody id="wardTable"></tbody>
+    </table>
+  </div>
+
+  <div class="table-box">
+    <h3>🩺 Diagnosis ที่พบบ่อย (Top 10)</h3>
+    <table>
+      <thead><tr><th>อันดับ</th><th>Diagnosis</th><th>จำนวน</th><th>OR</th><th>Crisis</th></tr></thead>
+      <tbody id="diagTable"></tbody>
+    </table>
+  </div>
+</main>
+</div>
+
+<script>
+var allData = [];
+var charts = {};
+
+async function doLogin() {
+  var res = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:document.getElementById('un').value, password:document.getElementById('pw').value}) });
+  if (res.ok) { document.getElementById('loginBox').style.display='none'; document.getElementById('app').style.display='block'; loadData(); }
+  else { document.getElementById('err').textContent = 'username หรือ password ไม่ถูกต้อง'; }
+}
+
+async function loadData() {
+  var data = await fetch('/api/form-submissions').then(r=>r.json());
+  allData = data;
+
+  // populate ward filter
+  var wards = [...new Set(data.map(r=>r.ward).filter(Boolean))].sort();
+  var sel = document.getElementById('wardFilter');
+  sel.innerHTML = '<option value="all">ทั้งหมด</option>' + wards.map(w=>`<option value="${w}">${w}</option>`).join('');
+
+  applyFilter();
+}
+
+function applyFilter() {
+  var range = document.getElementById('rangeFilter').value;
+  var type  = document.getElementById('typeFilter').value;
+  var ward  = document.getElementById('wardFilter').value;
+
+  var now = new Date();
+  var filtered = allData.filter(function(r) {
+    if (type !== 'all' && r.form_type !== type) return false;
+    if (ward !== 'all' && r.ward !== ward) return false;
+    if (range !== 'all') {
+      var days = parseInt(range);
+      var d = new Date(r.submitted_at);
+      if ((now - d) / 86400000 > days) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('subtitle').textContent =
+    'แสดงข้อมูล ' + filtered.length + ' รายการ จากทั้งหมด ' + allData.length + ' รายการ';
+
+  renderSummary(filtered);
+  renderCharts(filtered);
+  renderTables(filtered);
+}
+
+function count(arr, key, val) { return arr.filter(r=>r[key]===val).length; }
+function countExtra(arr, key, val) {
+  return arr.filter(r=>{
+    var ex = typeof r.extra_data==='string'?JSON.parse(r.extra_data):(r.extra_data||{});
+    return ex[key]===val;
+  }).length;
+}
+
+function renderSummary(d) {
+  var entered = d.filter(r=>r.admission_status==='confirmed').length;
+  var notEnter = d.filter(r=>r.admission_status==='return_ward').length;
+  var completed = d.filter(r=>r.status==='completed').length;
+  document.getElementById('summaryCards').innerHTML = [
+    {num: d.length, lbl: 'คำขอทั้งหมด', cls: 'blue'},
+    {num: count(d,'form_type','or'), lbl: 'ICU for OR', cls: 'purple'},
+    {num: count(d,'form_type','crisis'), lbl: 'ICU Crisis', cls: 'red'},
+    {num: count(d,'urgency','emergency'), lbl: '🔴 เร่งด่วนมาก', cls: 'red'},
+    {num: entered, lbl: '✅ เข้า ICU', cls: 'green'},
+    {num: notEnter, lbl: '🔙 ไม่เข้า ICU', cls: 'orange'},
+    {num: completed, lbl: '🎉 เสร็จสิ้น', cls: 'teal'},
+    {num: count(d,'icu_type','unplan'), lbl: '🚨 Unplan', cls: 'red'},
+  ].map(c=>`<div class="card ${c.cls}"><div class="num">${c.num}</div><div class="lbl">${c.lbl}</div></div>`).join('');
+}
+
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function makeChart(id, type, labels, data, colors, options) {
+  destroyChart(id);
+  var ctx = document.getElementById(id).getContext('2d');
+  charts[id] = new Chart(ctx, {
+    type: type,
+    data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: type==='pie'||type==='doughnut'?2:0, borderRadius: type==='bar'?6:0 }] },
+    options: Object.assign({ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position: type==='bar'?'bottom':'right', labels:{ font:{size:11}, padding:10 } } } }, options||{})
+  });
+}
+
+function renderCharts(d) {
+  makeChart('chartType','doughnut',
+    ['ICU for OR','ICU Crisis'],
+    [count(d,'form_type','or'), count(d,'form_type','crisis')],
+    ['#8e44ad','#e74c3c']);
+
+  makeChart('chartUrgency','doughnut',
+    ['🔴 เร่งด่วนมาก','🟡 ปานกลาง','🟢 ปกติ'],
+    [count(d,'urgency','emergency'),count(d,'urgency','urgent'),count(d,'urgency','normal')],
+    ['#e74c3c','#f39c12','#27ae60']);
+
+  makeChart('chartStatus','doughnut',
+    ['⏳ รอดำเนินการ','✅ รับทราบ รอดำเนินการ','🟡 รอเตียงว่าง','🎉 เสร็จสิ้น'],
+    [count(d,'status','pending'),count(d,'status','acknowledged'),count(d,'status','waiting_bed'),count(d,'status','completed')],
+    ['#f39c12','#27ae60','#f1c40f','#2980b9']);
+
+  makeChart('chartAdmission','doughnut',
+    ['รอติดตาม','✅ เข้า ICU','🔙 ไม่เข้า'],
+    [count(d,'admission_status','pending'),count(d,'admission_status','confirmed'),count(d,'admission_status','return_ward')],
+    ['#95a5a6','#27ae60','#e74c3c']);
+
+  var wards = [...new Set(d.map(r=>r.ward).filter(Boolean))].sort();
+  makeChart('chartWard','bar', wards, wards.map(w=>d.filter(r=>r.ward===w).length),
+    ['#3498db','#e74c3c','#f39c12','#27ae60','#9b59b6','#1abc9c','#e67e22','#34495e'],
+    { plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{stepSize:1} } } });
+
+  makeChart('chartIcuType','doughnut',
+    ['📋 Plan','🚨 Unplan'],
+    [count(d,'icu_type','plan'),count(d,'icu_type','unplan')],
+    ['#3498db','#e74c3c']);
+}
+
+function renderTables(d) {
+  var wards = [...new Set(d.map(r=>r.ward).filter(Boolean))].sort();
+  document.getElementById('wardTable').innerHTML = wards.map(w=>{
+    var wd = d.filter(r=>r.ward===w);
+    return `<tr>
+      <td><b>${w}</b></td>
+      <td>${wd.length}</td>
+      <td>${count(wd,'form_type','or')}</td>
+      <td>${count(wd,'form_type','crisis')}</td>
+      <td>${count(wd,'admission_status','confirmed')}</td>
+      <td>${count(wd,'admission_status','return_ward')}</td>
+      <td>${count(wd,'status','completed')}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;color:#999;">ไม่มีข้อมูล</td></tr>';
+
+  var diagCount = {};
+  d.forEach(r=>{ if(r.diagnosis){ diagCount[r.diagnosis]=(diagCount[r.diagnosis]||0)+1; } });
+  var top10 = Object.entries(diagCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  document.getElementById('diagTable').innerHTML = top10.map(([diag,cnt],i)=>{
+    var orCnt = d.filter(r=>r.diagnosis===diag&&r.form_type==='or').length;
+    var criCnt = d.filter(r=>r.diagnosis===diag&&r.form_type==='crisis').length;
+    return `<tr>
+      <td>${i+1}</td>
+      <td><b>${diag}</b></td>
+      <td>${cnt}</td>
+      <td>${orCnt}</td>
+      <td>${criCnt}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:#999;">ไม่มีข้อมูล</td></tr>';
+}
+
+// auto login ถ้า session ยังอยู่
+fetch('/api/admin/check').then(r=>r.json()).then(d=>{
+  if(d.isAdmin){ document.getElementById('loginBox').style.display='none'; document.getElementById('app').style.display='block'; loadData(); }
+});
+</script>
+</body>
+</html>
