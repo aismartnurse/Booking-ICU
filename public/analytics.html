@@ -147,6 +147,42 @@
       <tbody id="diagTable"></tbody>
     </table>
   </div>
+
+  <div class="table-box">
+    <h3>📋 เรื่องที่ต้องการจอง ICU (Crisis - Top 10)</h3>
+    <table>
+      <thead><tr><th>อันดับ</th><th>เรื่องที่ต้องการจอง</th><th>จำนวน</th></tr></thead>
+      <tbody id="reasonTable"></tbody>
+    </table>
+  </div>
+
+  <div class="table-box">
+    <h3>👨‍⚕️ แพทย์ผู้ผ่าตัด (OR - Top 10)</h3>
+    <table>
+      <thead><tr><th>อันดับ</th><th>แพทย์ผู้ผ่าตัด</th><th>จำนวนเคส</th><th>เข้า ICU</th><th>ไม่เข้า</th></tr></thead>
+      <tbody id="doctorTable"></tbody>
+    </table>
+  </div>
+
+  <div class="table-box">
+    <h3>🏥 สถานะเข้า ICU แยกตามประเภท</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div>
+        <h4 style="font-size:13px;color:#8e44ad;margin-bottom:10px;">🔪 ICU for OR</h4>
+        <table>
+          <thead><tr><th>สถานะ</th><th>จำนวน</th><th>%</th></tr></thead>
+          <tbody id="admOrTable"></tbody>
+        </table>
+      </div>
+      <div>
+        <h4 style="font-size:13px;color:#e74c3c;margin-bottom:10px;">🚨 ICU Crisis</h4>
+        <table>
+          <thead><tr><th>สถานะ</th><th>จำนวน</th><th>%</th></tr></thead>
+          <tbody id="admCrisisTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </main>
 </div>
 
@@ -280,20 +316,63 @@ function renderTables(d) {
     </tr>`;
   }).join('') || '<tr><td colspan="7" style="text-align:center;color:#999;">ไม่มีข้อมูล</td></tr>';
 
+  // Diagnosis Top 10
   var diagCount = {};
   d.forEach(r=>{ if(r.diagnosis){ diagCount[r.diagnosis]=(diagCount[r.diagnosis]||0)+1; } });
   var top10 = Object.entries(diagCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
   document.getElementById('diagTable').innerHTML = top10.map(([diag,cnt],i)=>{
     var orCnt = d.filter(r=>r.diagnosis===diag&&r.form_type==='or').length;
     var criCnt = d.filter(r=>r.diagnosis===diag&&r.form_type==='crisis').length;
-    return `<tr>
-      <td>${i+1}</td>
-      <td><b>${diag}</b></td>
-      <td>${cnt}</td>
-      <td>${orCnt}</td>
-      <td>${criCnt}</td>
-    </tr>`;
+    return `<tr><td>${i+1}</td><td><b>${diag}</b></td><td>${cnt}</td><td>${orCnt}</td><td>${criCnt}</td></tr>`;
   }).join('') || '<tr><td colspan="5" style="text-align:center;color:#999;">ไม่มีข้อมูล</td></tr>';
+
+  // เรื่องที่ต้องการจอง (Crisis)
+  var reasonCount = {};
+  d.filter(r=>r.form_type==='crisis').forEach(r=>{
+    var ex = typeof r.extra_data==='string'?JSON.parse(r.extra_data):(r.extra_data||{});
+    if(ex.reason){ reasonCount[ex.reason]=(reasonCount[ex.reason]||0)+1; }
+  });
+  var topReasons = Object.entries(reasonCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  document.getElementById('reasonTable').innerHTML = topReasons.map(([reason,cnt],i)=>{
+    return `<tr><td>${i+1}</td><td><b>${reason}</b></td><td>${cnt}</td></tr>`;
+  }).join('') || '<tr><td colspan="3" style="text-align:center;color:#999;">ไม่มีข้อมูล</td></tr>';
+
+  // แพทย์ผู้ผ่าตัด (OR)
+  var doctorCount = {};
+  var doctorMap = {};
+  d.filter(r=>r.form_type==='or').forEach(r=>{
+    var ex = typeof r.extra_data==='string'?JSON.parse(r.extra_data):(r.extra_data||{});
+    var docs = (ex.doctor||'').split(',').map(s=>s.trim()).filter(Boolean);
+    docs.forEach(doc=>{
+      doctorCount[doc]=(doctorCount[doc]||0)+1;
+      if(!doctorMap[doc]) doctorMap[doc]={confirmed:0,return_ward:0};
+      if(r.admission_status==='confirmed') doctorMap[doc].confirmed++;
+      if(r.admission_status==='return_ward') doctorMap[doc].return_ward++;
+    });
+  });
+  var topDoctors = Object.entries(doctorCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  document.getElementById('doctorTable').innerHTML = topDoctors.map(([doc,cnt],i)=>{
+    var dm = doctorMap[doc]||{};
+    return `<tr><td>${i+1}</td><td><b>${doc}</b></td><td>${cnt}</td><td style="color:#1e8449;">${dm.confirmed||0}</td><td style="color:#c0392b;">${dm.return_ward||0}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:#999;">ไม่มีข้อมูล</td></tr>';
+
+  // เข้า ICU แยก OR/Crisis
+  function admTable(tableId, type) {
+    var sub = d.filter(r=>r.form_type===type);
+    var total = sub.length;
+    var rows = [
+      {label:'✅ เข้า ICU', val:'confirmed', color:'#1e8449'},
+      {label:'❌ ไม่เข้า ICU', val:'return_ward', color:'#c0392b'},
+      {label:'⏳ รอติดตาม', val:'pending', color:'#b9770e'},
+    ];
+    document.getElementById(tableId).innerHTML = rows.map(row=>{
+      var n = sub.filter(r=>(r.admission_status||'pending')===row.val).length;
+      var pct = total ? Math.round(n/total*100) : 0;
+      return `<tr><td style="color:${row.color};font-weight:600;">${row.label}</td><td>${n}</td><td>${pct}%</td></tr>`;
+    }).join('')+'<tr style="font-weight:700;border-top:2px solid #eee;"><td>รวม</td><td>'+total+'</td><td>100%</td></tr>';
+  }
+  admTable('admOrTable','or');
+  admTable('admCrisisTable','crisis');
 }
 
 // auto login ถ้า session ยังอยู่
@@ -303,3 +382,4 @@ fetch('/api/admin/check').then(r=>r.json()).then(d=>{
 </script>
 </body>
 </html>
+PLACEHOLDER
