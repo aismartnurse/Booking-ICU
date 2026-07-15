@@ -141,14 +141,6 @@
   </div>
 
   <div class="table-box">
-    <h3>🩺 Diagnosis ที่พบบ่อย (Top 10)</h3>
-    <table>
-      <thead><tr><th>อันดับ</th><th>Diagnosis</th><th>จำนวน</th><th>OR</th><th>Crisis</th></tr></thead>
-      <tbody id="diagTable"></tbody>
-    </table>
-  </div>
-
-  <div class="table-box">
     <h3>📋 เรื่องที่ต้องการจอง ICU (Crisis - Top 10)</h3>
     <table>
       <thead><tr><th>อันดับ</th><th>เรื่องที่ต้องการจอง</th><th>จำนวน</th></tr></thead>
@@ -315,16 +307,6 @@ function renderTables(d) {
       <td>${count(wd,'status','completed')}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="7" style="text-align:center;color:#999;">ไม่มีข้อมูล</td></tr>';
-
-  // Diagnosis Top 10
-  var diagCount = {};
-  d.forEach(r=>{ if(r.diagnosis){ diagCount[r.diagnosis]=(diagCount[r.diagnosis]||0)+1; } });
-  var top10 = Object.entries(diagCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  document.getElementById('diagTable').innerHTML = top10.map(([diag,cnt],i)=>{
-    var orCnt = d.filter(r=>r.diagnosis===diag&&r.form_type==='or').length;
-    var criCnt = d.filter(r=>r.diagnosis===diag&&r.form_type==='crisis').length;
-    return `<tr><td>${i+1}</td><td><b>${diag}</b></td><td>${cnt}</td><td>${orCnt}</td><td>${criCnt}</td></tr>`;
-  }).join('') || '<tr><td colspan="5" style="text-align:center;color:#999;">ไม่มีข้อมูล</td></tr>';
 
   // เรื่องที่ต้องการจอง (Crisis)
   var reasonCount = {};
