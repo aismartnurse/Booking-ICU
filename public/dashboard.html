@@ -478,6 +478,79 @@ async function releaseBedIfAssigned(id) {
   }
 }
 
+// ===== คำนวณ SOS score อัตโนมัติ =====
+// เกณฑ์อ้างอิง: ภานุวงษ์ แสนสำราญใจ, พารณ ขันติโชติ. ความถูกต้องของ SOS score
+// สำหรับการทำนายการเสียชีวิตในโรงพยาบาลของผู้ป่วยฉุกเฉิน. วารสาร มฉก.วิชาการ 2565;26(1):57-65.
+// จุดตัด ≥3 คะแนน = เสี่ยงสูง (Sensitivity 86.11%, Specificity 60.59%)
+function sosNum(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; }
+function sosPanelHTML(extra){
+  function scoreBT(t){ if(t<=35)return 2; if(t<=36)return 1; if(t<=38)return 0; if(t<=38.4)return 1; return 2; }
+  function scoreSBP(s){ if(s<=80)return 3; if(s<=90)return 2; if(s<=100)return 1; if(s<=180)return 0; if(s<=199)return 1; return 2; }
+  function scoreHR(h){ if(h<=40)return 3; if(h<=50)return 1; if(h<=100)return 0; if(h<=120)return 1; if(h<=139)return 2; return 3; }
+  function scoreRR(r){ if(r<=8)return 3; if(r<=20)return 0; if(r<=25)return 1; if(r<=34)return 2; return 3; }
+  function scoreUrineHr(u){ if(u<=20)return 2; if(u<40)return 1; return 0; }  // u = ml/hr
+  function scoreConscious(c){
+    var x=(c||'').toLowerCase();
+    if(!x) return null;
+    // แมปตามตัวเลือก 6 ระดับในฟอร์ม (อ้างอิงตาราง SOS รพ.พุทธชินราช)
+    if(x.includes('full')||x.includes('รู้สึกตัวดี')||x.includes('ตื่นดี')||x.includes('alert')) return 0;
+    if(x.includes('confus')||x.includes('สับสน')) return 1;
+    if(x.includes('drowsi')||x.includes('ง่วง')||x.includes('ซึม')&&!x.includes('ซึมมาก')) return 1;
+    if(x.includes('stupor')||x.includes('semicoma')||x.includes('ซึมมาก')) return 2;
+    if(x.includes('coma')&&!x.includes('semicoma')) return 3;
+    if(x.includes('ไม่รู้สึกตัว')||x.includes('unrespon')) return 3;
+    // สำรอง: AVPU เดิม
+    if(x.includes('pain')||x.includes('เจ็บ')) return 2;
+    if(x.includes('voice')||x.includes('verbal')||x.includes('เสียง')||x.includes('เรียก')) return 1;
+    return null;  // อ่านค่าไม่ได้
+  }
+
+  var items=[];  // {label, shown, score|null}
+  var bt=sosNum(extra.temp), sbp=sosNum(extra.sbp), hr=sosNum(extra.hr), rr=sosNum(extra.rr), ur=sosNum(extra.urine);
+  items.push({label:'Temp (°C)', shown:(extra.temp||'-'), score: bt==null?null:scoreBT(bt)});
+  items.push({label:'SBP (mmHg)', shown:(extra.sbp||'-'), score: sbp==null?null:scoreSBP(sbp)});
+  items.push({label:'HR (/min)', shown:(extra.hr||'-'), score: hr==null?null:scoreHR(hr)});
+  items.push({label:'RR (/min)', shown:(extra.rr||'-'), score: rr==null?null:scoreRR(rr)});
+  var upHr = ur==null?null:ur;   // ฟอร์มกรอกเป็น ml/hr โดยตรงแล้ว
+  items.push({label:'Urine', shown: ur==null?'-':(ur+' ml/hr'), score: upHr==null?null:scoreUrineHr(upHr)});
+  var cScore=scoreConscious(extra.conscious);
+  items.push({label:'Conscious', shown:(extra.conscious||'-'), score:cScore});
+
+  var missing=items.filter(function(i){return i.score===null;}).map(function(i){return i.label;});
+  var total=items.reduce(function(a,i){return a+(i.score||0);},0);
+  var complete=missing.length===0;
+  var high = total>=3;
+  var band = high
+    ? '<span style="color:#fff;background:#e74c3c;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">เสี่ยงสูง — ควรประเมิน/escalate ด่วน</span>'
+    : '<span style="color:#fff;background:#27ae60;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">เสี่ยงต่ำ</span>';
+
+  var rowsHtml = items.map(function(i){
+    var sc = i.score===null
+      ? '<span style="color:#e67e22;font-weight:700;">อ่านค่าไม่ได้</span>'
+      : '<b>'+i.score+'</b>';
+    return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed #eee;">'
+      +'<span style="color:#555;">'+i.label+'</span>'
+      +'<span>'+i.shown+' &nbsp;→&nbsp; '+sc+' คะแนน</span></div>';
+  }).join('');
+
+  var warn = complete ? '' :
+    '<div style="background:#fef5e7;border:1px solid #f39c12;border-radius:8px;padding:8px 10px;font-size:12px;color:#9a6a00;margin-top:8px;">'
+    +'⚠️ ข้อมูลไม่ครบ (ขาด/อ่านไม่ได้: '+missing.join(', ')+') — คะแนนนี้คำนวณจากเฉพาะค่าที่อ่านได้ อาจต่ำกว่าค่าจริง</div>';
+
+  return '<div class="modal-row" style="flex-direction:column;gap:8px;align-items:stretch;background:#f7fbf9;border:1px solid '+(high?'#e74c3c':'#cfe8dc')+';border-radius:10px;padding:12px;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;">'
+      +'<b style="font-size:14px;">🧮 SOS score (คำนวณอัตโนมัติ)</b>'
+      +'<span style="font-size:22px;font-weight:800;color:'+(high?'#e74c3c':'#27ae60')+';">'+total+(complete?'':'<span style="font-size:12px;color:#e67e22;">*</span>')+'</span>'
+    +'</div>'
+    +'<div>'+band+'</div>'
+    +'<div style="margin-top:2px;">'+rowsHtml+'</div>'
+    +warn
+    +'<div style="font-size:10.5px;color:#888;margin-top:4px;line-height:1.5;">'
+      +'เกณฑ์อ้างอิง: SOS score, วารสาร มฉก.วิชาการ 2565 (จุดตัด ≥3 = เสี่ยงสูง) · '
+      +'<b>เป็นเครื่องมือช่วยประเมินจากค่าที่กรอก ไม่ทดแทนวิจารณญาณของบุคลากร</b></div>'
+    +'</div>';
+}
+
 async function showDetail(id) {
   var r = await fetch('/api/form-submissions/'+id).then(function(r){return r.json();});
   var extra = typeof r.extra_data==='string' ? JSON.parse(r.extra_data) : (r.extra_data||{});
@@ -501,9 +574,8 @@ async function showDetail(id) {
     ['HR (bpm.)', extra.hr||''],
     ['RR (bpm.)', extra.rr||''],
     ['Temp (°C)', extra.temp||''],
-    ['SOS score', extra.sos_score||''],
     ['Conscious', extra.conscious||''],
-    ['ปริมาณปัสสาวะ/8hrs', extra.urine||''],
+    ['ปริมาณปัสสาวะ (ml/hr)', extra.urine||''],
     ['เรื่องที่ต้องการจอง', extra.reason||''],
     ['Resuscitation', extra.resuscitation||''],
     ['Line Notify', extra.line_notify||''],
@@ -512,6 +584,7 @@ async function showDetail(id) {
   document.getElementById('detailBody').innerHTML = rows.map(function(rv){
     return '<div class="modal-row"><b>'+rv[0]+'</b><span>'+rv[1]+'</span></div>';
   }).join('')
+  + (r.form_type==='crisis' ? sosPanelHTML(extra) : '')
   + '<div class="modal-row" style="flex-direction:column;gap:6px;">'
   + '<div style="display:flex;justify-content:space-between;align-items:center;">'
   + '<b>หมายเหตุ</b>'
