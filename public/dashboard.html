@@ -409,7 +409,8 @@ async function moveBackToWard(id, currentBed) {
   var sub = allSubs.find(function(r){return r.id===id;});
   var name = sub ? (sub.patient_name||'') : '';
   var originWard = sub ? (sub.ward||'') : '';
-  var wardList = Array.from(new Set(allSubs.map(function(r){return r.ward;}).filter(Boolean)));
+  var standardWards = ['Ward 5','Ward 6','Ward 7','Ward 8'];
+  var wardList = Array.from(new Set(standardWards.concat(allSubs.map(function(r){return r.ward;}).filter(Boolean)))).sort();
   var dest = prompt('ย้ายผู้ป่วย '+name+' กลับไปที่ ward ใด?\n(เว้นว่าง = ward ต้นทาง "'+originWard+'")\n\nward ที่มีในระบบ: '+wardList.join(', '), originWard);
   if (dest === null) return;
   dest = (dest.trim() || originWard);
