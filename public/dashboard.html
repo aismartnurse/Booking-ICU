@@ -108,6 +108,18 @@
   </div>
 </div>
 
+<!-- modal ย้ายกลับ ward -->
+<div class="modal-overlay" id="moveWardModal">
+  <div class="modal" style="max-width:420px;">
+    <h3>🏠 ย้ายกลับ Ward</h3>
+    <div id="moveWardInfo" style="font-size:13px;color:#555;margin-bottom:12px;"></div>
+    <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">เลือกหอผู้ป่วยปลายทาง</label>
+    <select id="moveWardSelect" style="width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px;"></select>
+    <button onclick="confirmMoveBackToWard()" style="width:100%;margin-top:14px;padding:10px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">ยืนยันย้ายกลับ ward</button>
+    <button class="modal-close" onclick="document.getElementById('moveWardModal').classList.remove('show')">ยกเลิก</button>
+  </div>
+</div>
+
 <!-- modal จัดการสิทธิ์ -->
 <div class="modal-overlay" id="settingsModal">
   <div class="modal" style="max-width:700px;">
@@ -152,7 +164,7 @@ document.getElementById('loginBtn').onclick = async function() {
 document.getElementById('logoutBtn').onclick = async function() { await fetch('/api/admin/logout',{method:'POST'}); location.reload(); };
 document.getElementById('settingsBtn').onclick = function() { document.getElementById('settingsModal').classList.add('show'); };
 
-['detailModal','settingsModal'].forEach(function(id) {
+['detailModal','settingsModal','moveWardModal'].forEach(function(id) {
   document.getElementById(id).onclick = function(e) { if(e.target===this) this.classList.remove('show'); };
 });
 
@@ -405,22 +417,35 @@ async function moveBed(id, currentBed) {
   loadAll();
 }
 
-async function moveBackToWard(id, currentBed) {
+var moveWardCtx = null;
+function moveBackToWard(id, currentBed) {
   var sub = allSubs.find(function(r){return r.id===id;});
   var name = sub ? (sub.patient_name||'') : '';
   var originWard = sub ? (sub.ward||'') : '';
+  moveWardCtx = { id:id, bed:currentBed };
   var standardWards = ['Ward 5','Ward 6','Ward 7','Ward 8'];
   var wardList = Array.from(new Set(standardWards.concat(allSubs.map(function(r){return r.ward;}).filter(Boolean)))).sort();
-  var dest = prompt('ย้ายผู้ป่วย '+name+' กลับไปที่ ward ใด?\n(เว้นว่าง = ward ต้นทาง "'+originWard+'")\n\nward ที่มีในระบบ: '+wardList.join(', '), originWard);
-  if (dest === null) return;
-  dest = (dest.trim() || originWard);
-  if (!confirm('ยืนยันย้ายผู้ป่วย '+name+' กลับไปที่ '+dest+' เนื่องจากอาการดีขึ้น?\n\nเตียง '+(currentBed||'')+' จะถูกตั้งเป็น “ทำความสะอาด” และแจ้งเตือนไปที่ '+dest)) return;
-  if (currentBed) {
+  var sel = document.getElementById('moveWardSelect');
+  sel.innerHTML = wardList.map(function(w){
+    return '<option value="'+w+'"'+(w===originWard?' selected':'')+'>'+w+(w===originWard?' (ต้นทาง)':'')+'</option>';
+  }).join('');
+  document.getElementById('moveWardInfo').innerHTML =
+    'ผู้ป่วย: <b>'+name+'</b><br>เตียง ICU: '+(currentBed||'-')+' → จะถูกตั้งเป็น “ทำความสะอาด”';
+  document.getElementById('moveWardModal').classList.add('show');
+}
+
+async function confirmMoveBackToWard() {
+  if (!moveWardCtx) return;
+  var ctx = moveWardCtx;
+  var dest = document.getElementById('moveWardSelect').value;
+  document.getElementById('moveWardModal').classList.remove('show');
+  if (ctx.bed) {
     var beds = await fetch('/api/beds').then(function(r){return r.json();});
-    var bed = beds.find(function(b){return b.label===currentBed;});
+    var bed = beds.find(function(b){return b.label===ctx.bed;});
     if (bed) await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'cleaning'})});
   }
-  await fetch('/api/form-submissions/'+id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:'discharged', assignedBed:null, destinationWard:dest})});
+  await fetch('/api/form-submissions/'+ctx.id+'/admission', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({admissionStatus:'discharged', assignedBed:null, destinationWard:dest})});
+  moveWardCtx = null;
   loadAll();
 }
 
