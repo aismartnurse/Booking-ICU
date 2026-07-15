@@ -298,8 +298,8 @@ router.put('/form-submissions/:id/urgency', requireAdmin, async (req, res) => {
 });
 
 router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => {
-  const { admissionStatus, assignedBed } = req.body;
-  if (!['pending', 'confirmed', 'return_ward'].includes(admissionStatus)) return res.status(400).json({ error: 'invalid status' });
+  const { admissionStatus, assignedBed, destinationWard } = req.body;
+  if (!['pending', 'confirmed', 'return_ward', 'discharged'].includes(admissionStatus)) return res.status(400).json({ error: 'invalid status' });
 
   const row = await db.get('SELECT * FROM form_submissions WHERE id = $1', [req.params.id]);
   if (!row) return res.status(404).json({ error: 'not found' });
@@ -308,6 +308,20 @@ router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => 
     'UPDATE form_submissions SET admission_status=$1, assigned_bed=$2, updated_at=NOW() WHERE id=$3',
     [admissionStatus, assignedBed || null, req.params.id]
   );
+
+  // ward ปลายทาง: ถ้าเลือกไว้ใช้อันนั้น ไม่งั้นใช้ ward ต้นทาง
+  const destWard = (admissionStatus === 'discharged' && destinationWard) ? destinationWard : row.ward;
+
+  // เก็บ ward ปลายทางลง extra_data (สำหรับกรณีย้ายกลับ)
+  if (admissionStatus === 'discharged') {
+    try {
+      let extra = row.extra_data;
+      if (typeof extra === 'string') extra = JSON.parse(extra || '{}');
+      extra = extra || {};
+      extra.destination_ward = destWard;
+      await db.run('UPDATE form_submissions SET extra_data=$1 WHERE id=$2', [JSON.stringify(extra), req.params.id]);
+    } catch (e) { console.error('extra_data update error:', e.message); }
+  }
 
   // แจ้งเตือน LINE
   const { notifyAllApprovers, pushText } = require('../lib/line');
@@ -323,17 +337,31 @@ router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => 
       `🔙 ผู้ป่วยไม่เข้า ICU - กลับ Ward\n` +
       `ผู้ป่วย: ${row.patient_name} (HN: ${row.patient_hn})\n` +
       `หอผู้ป่วย: ${row.ward}`;
+  } else if (admissionStatus === 'discharged') {
+    msg =
+      `🏠 ผู้ป่วยอาการดีขึ้น ย้ายกลับ Ward\n` +
+      `ผู้ป่วย: ${row.patient_name} (HN: ${row.patient_hn})\n` +
+      `หอผู้ป่วยต้นทาง: ${row.ward}\n` +
+      `หอผู้ป่วยปลายทาง: ${destWard}` +
+      (row.assigned_bed ? `\nออกจากเตียง ICU: ${row.assigned_bed}` : '');
   }
   if (msg) {
     notifyAllApprovers(msg).catch(console.error);
-    // แจ้งกลับ ward
+    // แจ้งกลับ ward — ต้นทางและปลายทาง (ถ้าต่างกัน)
     try {
-      const wardName = (row.ward || '').toLowerCase().replace(/\s/g, '');
+      const targetWards = [...new Set([row.ward, destWard].filter(Boolean))]
+        .map(w => w.toLowerCase().replace(/\s/g, ''));
       const users = await db.all("SELECT line_user_id, display_name FROM users WHERE role = 'requester'");
+      const sent = new Set();
       for (const u of users) {
         const name = (u.display_name || '').toLowerCase().replace(/\s/g, '');
-        if (name && wardName && wardName.includes(name.replace('ward','')||'') || name.includes(wardName)) {
+        if (!name || sent.has(u.line_user_id)) continue;
+        const match = targetWards.some(wardName =>
+          (wardName && (wardName.includes(name.replace('ward', '') || '') || name.includes(wardName)))
+        );
+        if (match) {
           pushText(u.line_user_id, msg).catch(console.error);
+          sent.add(u.line_user_id);
         }
       }
     } catch(e) { console.error('ward notify error:', e.message); }
