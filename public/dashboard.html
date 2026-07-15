@@ -120,6 +120,16 @@
   </div>
 </div>
 
+<!-- modal ใส่รหัสผ่าน (ปิดบังเป็นจุด) -->
+<div class="modal-overlay" id="pwModal">
+  <div class="modal" style="max-width:320px;">
+    <h3 id="pwTitle" style="font-size:15px;">ใส่รหัสผ่าน</h3>
+    <input id="pwInput" type="password" inputmode="numeric" autocomplete="off" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:18px;letter-spacing:4px;text-align:center;">
+    <button id="pwOk" style="width:100%;margin-top:12px;padding:10px;background:#06c755;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">ตกลง</button>
+    <button class="modal-close" id="pwCancel">ยกเลิก</button>
+  </div>
+</div>
+
 <!-- modal จัดการสิทธิ์ -->
 <div class="modal-overlay" id="settingsModal">
   <div class="modal" style="max-width:700px;">
@@ -162,8 +172,33 @@ document.getElementById('loginBtn').onclick = async function() {
   if (res.ok) { showApp(); } else { document.getElementById('loginErr').textContent = 'username หรือ password ไม่ถูกต้อง'; }
 };
 document.getElementById('logoutBtn').onclick = async function() { await fetch('/api/admin/logout',{method:'POST'}); location.reload(); };
-document.getElementById('settingsBtn').onclick = function() {
-  var pw = prompt('ใส่รหัสผ่านเพื่อเข้าหน้าจัดการสิทธิ์:');
+
+// ---- กล่องใส่รหัสผ่านแบบปิดบัง (คืนค่าเป็น Promise) ----
+function askPassword(message) {
+  return new Promise(function(resolve){
+    var modal = document.getElementById('pwModal');
+    document.getElementById('pwTitle').textContent = message || 'ใส่รหัสผ่าน';
+    var input = document.getElementById('pwInput');
+    input.value = '';
+    modal.classList.add('show');
+    setTimeout(function(){ input.focus(); }, 50);
+    function done(val){
+      modal.classList.remove('show');
+      document.getElementById('pwOk').onclick = null;
+      document.getElementById('pwCancel').onclick = null;
+      input.onkeydown = null;
+      modal.onclick = null;
+      resolve(val);
+    }
+    document.getElementById('pwOk').onclick = function(){ done(input.value); };
+    document.getElementById('pwCancel').onclick = function(){ done(null); };
+    input.onkeydown = function(e){ if(e.key==='Enter'){ done(input.value); } else if(e.key==='Escape'){ done(null); } };
+    modal.onclick = function(e){ if(e.target===modal) done(null); };
+  });
+}
+
+document.getElementById('settingsBtn').onclick = async function() {
+  var pw = await askPassword('ใส่รหัสผ่านเพื่อเข้าหน้าจัดการสิทธิ์');
   if (pw === null) return;                         // กดยกเลิก
   if (pw !== 'Nci1234') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
   document.getElementById('settingsModal').classList.add('show');
@@ -561,8 +596,6 @@ async function showDetail(id) {
   var rows=[
     ['เวลาที่ส่ง', new Date(r.submitted_at).toLocaleString('th-TH')],
     ['ประเภท', formTypeLabel[r.form_type]||r.form_type||'-'],
-    ['ชื่อ-สกุล', r.patient_name||'-'],
-    ['HN', r.patient_hn||'-'],
     ['หอผู้ป่วย', r.ward||'-'],
     ['Diagnosis', r.diagnosis||'-'],
     ['Underlying disease', extra.underlying||''],
@@ -577,11 +610,18 @@ async function showDetail(id) {
     ['Conscious', extra.conscious||''],
     ['ปริมาณปัสสาวะ (ml/hr)', extra.urine||''],
     ['เรื่องที่ต้องการจอง', extra.reason||''],
+    ['Source of sepsis', extra.sepsis_source||''],
     ['Resuscitation', extra.resuscitation||''],
-    ['Line Notify', extra.line_notify||''],
   ].filter(function(rv){ return rv[1] && rv[1]!=='-' && rv[1]!==''; });
 
-  document.getElementById('detailBody').innerHTML = rows.map(function(rv){
+  document.getElementById('detailBody').innerHTML =
+    '<div class="modal-row" style="flex-direction:column;gap:6px;align-items:stretch;">'
+    + '<b>ชื่อผู้ป่วย / HN (แก้ไขได้)</b>'
+    + '<input id="editName" value="'+(r.patient_name||'').replace(/"/g,'&quot;')+'" placeholder="ชื่อ-สกุล" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;">'
+    + '<input id="editHn" value="'+(r.patient_hn||'').replace(/"/g,'&quot;')+'" placeholder="HN" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;">'
+    + '<button onclick="savePatient('+id+')" style="padding:8px;background:#2980b9;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">💾 บันทึกชื่อ/HN</button>'
+    + '</div>'
+    + rows.map(function(rv){
     return '<div class="modal-row"><b>'+rv[0]+'</b><span>'+rv[1]+'</span></div>';
   }).join('')
   + (r.form_type==='crisis' ? sosPanelHTML(extra) : '')
@@ -597,7 +637,7 @@ async function showDetail(id) {
 }
 
 async function deleteSubmission(id) {
-  var pw = prompt('ใส่รหัสผ่านเพื่อยืนยันการลบ:');
+  var pw = await askPassword('ใส่รหัสผ่านเพื่อยืนยันการลบ');
   if (pw === null) return;
   if (pw !== '1234') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
   if (!confirm('ยืนยันลบคำขอ #'+id+' ?')) return;
@@ -611,6 +651,17 @@ async function saveNote(id) {
   await fetch('/api/form-submissions/'+id+'/note', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({note:note}) });
   alert('บันทึกเรียบร้อย');
   loadAll();
+}
+
+async function savePatient(id) {
+  var pw = await askPassword('ใส่รหัสผ่านเพื่อแก้ไขชื่อ/HN');
+  if (pw === null) return;
+  if (pw !== '0000') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
+  var name = document.getElementById('editName').value;
+  var hn = document.getElementById('editHn').value;
+  await fetch('/api/form-submissions/'+id+'/patient', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({patientName:name, patientHn:hn}) });
+  await loadAll();
+  showDetail(id);   // โหลดหน้ารายละเอียดใหม่ให้หัวข้ออัปเดต
 }
 
 function renderUsers(rows) {
