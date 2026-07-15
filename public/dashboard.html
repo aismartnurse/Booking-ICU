@@ -116,7 +116,7 @@
     <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">เลือกหอผู้ป่วยปลายทาง</label>
     <select id="moveWardSelect" style="width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px;"></select>
     <button onclick="confirmMoveBackToWard()" style="width:100%;margin-top:14px;padding:10px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">ยืนยันย้ายกลับ ward</button>
-    <button class="modal-close" onclick="document.getElementById('moveWardModal').classList.remove('show')">ยกเลิก</button>
+    <button class="modal-close" onclick="closeMoveWard()">ยกเลิก</button>
   </div>
 </div>
 
@@ -164,9 +164,10 @@ document.getElementById('loginBtn').onclick = async function() {
 document.getElementById('logoutBtn').onclick = async function() { await fetch('/api/admin/logout',{method:'POST'}); location.reload(); };
 document.getElementById('settingsBtn').onclick = function() { document.getElementById('settingsModal').classList.add('show'); };
 
-['detailModal','settingsModal','moveWardModal'].forEach(function(id) {
+['detailModal','settingsModal'].forEach(function(id) {
   document.getElementById(id).onclick = function(e) { if(e.target===this) this.classList.remove('show'); };
 });
+document.getElementById('moveWardModal').onclick = function(e) { if(e.target===this) closeMoveWard(); };
 
 async function checkAuth() {
   var r = await fetch('/api/admin/check').then(function(r){return r.json();});
@@ -342,18 +343,21 @@ function renderSubs() {
       +'<td>'+dot+'</td>'
       +'<td>'+stCell+'</td>'
       +'<td>'
+        +'<select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
+          +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
+          +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU</option>'
+          +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>❌ ไม่เข้า ICU</option>'
+          +'<option value="discharged"'+(adm==='discharged'?' selected':'')+'>🏠 ย้ายกลับ Ward</option>'
+        +'</select>'
+        +(adm==='confirmed' && r.assigned_bed
+          ? '<br><span style="font-size:11px;font-weight:700;color:#1e8449;">🛏️ '+r.assigned_bed+'</span>'
+            +' <button onclick="moveBed('+r.id+',\''+r.assigned_bed+'\')" style="font-size:10px;padding:2px 6px;background:#f39c12;color:#fff;border:none;border-radius:4px;cursor:pointer;">ย้ายเตียง</button>'
+            +' <button onclick="moveBackToWard('+r.id+',\''+r.assigned_bed+'\')" style="font-size:10px;padding:2px 6px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer;">ย้ายกลับ ward</button>'
+          : '')
         +(adm==='discharged'
-          ? '<span style="font-size:12px;font-weight:700;color:#27ae60;">🏠 ย้ายกลับ '+(extra.destination_ward || 'Ward')+'</span>'
-          : '<select class="adm-select" onchange="updateAdm('+r.id+',this.value)">'
-              +'<option value="pending"'+(adm==='pending'?' selected':'')+'>รอติดตาม</option>'
-              +'<option value="confirmed"'+(adm==='confirmed'?' selected':'')+'>✅ เข้า ICU</option>'
-              +'<option value="return_ward"'+(adm==='return_ward'?' selected':'')+'>❌ ไม่เข้า ICU</option>'
-            +'</select>'
-            +(adm==='confirmed' && r.assigned_bed
-              ? '<br><span style="font-size:11px;font-weight:700;color:#1e8449;">🛏️ '+r.assigned_bed+'</span>'
-                +' <button onclick="moveBed('+r.id+',\''+r.assigned_bed+'\')" style="font-size:10px;padding:2px 6px;background:#f39c12;color:#fff;border:none;border-radius:4px;cursor:pointer;">ย้ายเตียง</button>'
-                +' <button onclick="moveBackToWard('+r.id+',\''+r.assigned_bed+'\')" style="font-size:10px;padding:2px 6px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer;">ย้ายกลับ ward</button>'
-              : ''))
+          ? '<br><span style="font-size:11px;font-weight:700;color:#27ae60;">🏠 '+(extra.destination_ward || 'Ward')+'</span>'
+            +' <button onclick="moveBackToWard('+r.id+',null)" style="font-size:10px;padding:2px 6px;background:#2980b9;color:#fff;border:none;border-radius:4px;cursor:pointer;">แก้ไขปลายทาง</button>'
+          : '')
       +'</td>'
       +'<td>'+icuCell+'</td>'
       +'</tr>';
@@ -381,6 +385,11 @@ async function updateUrg(id, val) {
 }
 
 async function updateAdm(id, val) {
+  if (val === 'discharged') {
+    var s = allSubs.find(function(r){return r.id===id;});
+    moveBackToWard(id, (s && s.assigned_bed) ? s.assigned_bed : null);
+    return;   // modal จัดการต่อ (ยืนยัน/ยกเลิก)
+  }
   if (val === 'confirmed') {
     var beds = await fetch('/api/beds').then(function(r){return r.json();});
     var avail = beds.filter(function(b){return b.status==='available';});
@@ -432,6 +441,12 @@ function moveBackToWard(id, currentBed) {
   document.getElementById('moveWardInfo').innerHTML =
     'ผู้ป่วย: <b>'+name+'</b><br>เตียง ICU: '+(currentBed||'-')+' → จะถูกตั้งเป็น “ทำความสะอาด”';
   document.getElementById('moveWardModal').classList.add('show');
+}
+
+function closeMoveWard() {
+  document.getElementById('moveWardModal').classList.remove('show');
+  moveWardCtx = null;
+  loadAll();
 }
 
 async function confirmMoveBackToWard() {
