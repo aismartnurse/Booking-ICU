@@ -116,11 +116,6 @@
       <thead><tr><th>ชื่อ LINE</th><th>LINE userId</th><th>สิทธิ์</th><th>เปลี่ยนสิทธิ์</th></tr></thead>
       <tbody id="usersBody"></tbody>
     </table>
-    <div style="margin-top:22px;border:1.5px solid #e74c3c;border-radius:10px;padding:14px 16px;background:#fdecea;">
-      <div style="font-weight:700;color:#c0392b;font-size:14px;margin-bottom:4px;">⚠️ โซนอันตราย</div>
-      <div style="font-size:13px;color:#7b241c;line-height:1.5;margin-bottom:10px;">ลบคำขอจองเตียงทั้งหมดและรีเซ็ตเตียงให้ว่าง — ใช้สำหรับเคลียร์ข้อมูลทดสอบก่อนเริ่มใช้งานจริง <b>การลบนี้กู้คืนไม่ได้</b></div>
-      <button id="clearDataBtn" onclick="clearAllData()" style="padding:8px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;background:#e74c3c;color:#fff;">🗑️ ลบข้อมูลทั้งหมด</button>
-    </div>
     <button class="modal-close" onclick="document.getElementById('settingsModal').classList.remove('show')">ปิด</button>
   </div>
 </div>
@@ -156,31 +151,6 @@ document.getElementById('loginBtn').onclick = async function() {
 };
 document.getElementById('logoutBtn').onclick = async function() { await fetch('/api/admin/logout',{method:'POST'}); location.reload(); };
 document.getElementById('settingsBtn').onclick = function() { document.getElementById('settingsModal').classList.add('show'); };
-
-async function clearAllData() {
-  if (!confirm('⚠️ ยืนยันลบคำขอจองทั้งหมด และรีเซ็ตเตียงให้ว่าง?\n\nการลบนี้กู้คืนไม่ได้!')) return;
-  var typed = prompt('พิมพ์คำว่า  ลบ  แล้วกดตกลง เพื่อยืนยันการลบข้อมูลทั้งหมด');
-  if (typed === null) return;
-  if (typed.trim() !== 'ลบ') { alert('ยกเลิก: คำยืนยันไม่ถูกต้อง'); return; }
-  var btn = document.getElementById('clearDataBtn');
-  btn.disabled = true; btn.textContent = 'กำลังลบ...';
-  try {
-    var res = await fetch('/api/admin/clear-all-data', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ confirm:'DELETE-ALL' })
-    });
-    var data = await res.json();
-    if (res.ok) {
-      alert('✅ ลบข้อมูลเรียบร้อย (' + (data.deleted||0) + ' รายการ) และรีเซ็ตเตียงว่างแล้ว');
-      loadAll();
-    } else {
-      alert('❌ ลบไม่สำเร็จ: ' + (data.error || res.status));
-    }
-  } catch(e) {
-    alert('❌ เกิดข้อผิดพลาด: ' + e.message);
-  }
-  btn.disabled = false; btn.textContent = '🗑️ ลบข้อมูลทั้งหมด';
-}
 
 ['detailModal','settingsModal'].forEach(function(id) {
   document.getElementById(id).onclick = function(e) { if(e.target===this) this.classList.remove('show'); };
