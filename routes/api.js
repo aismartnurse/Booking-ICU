@@ -155,6 +155,22 @@ router.post('/admin/seed-beds', requireAdmin, async (req, res) => {
   res.json({ message: `สร้างเตียง ${count} เตียงเรียบร้อย` });
 });
 
+// ลบคำขอจองทั้งหมด + รีเซ็ตเตียงให้ว่าง (สำหรับเคลียร์ข้อมูลก่อนใช้งานจริง)
+// admin เท่านั้น และต้องส่ง confirm:'DELETE-ALL' มาด้วยเพื่อกันพลาด
+router.post('/admin/clear-all-data', requireAdmin, async (req, res) => {
+  if (req.body.confirm !== 'DELETE-ALL') {
+    return res.status(400).json({ error: 'ต้องยืนยันด้วย confirm=DELETE-ALL' });
+  }
+  try {
+    const before = await db.get('SELECT COUNT(*) AS c FROM form_submissions');
+    await db.run('DELETE FROM form_submissions');
+    await db.run("UPDATE beds SET status='available', current_request_id=NULL, updated_at=NOW()");
+    res.json({ ok: true, deleted: parseInt(before.c) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---------- Google Form Submissions ----------
 // รับข้อมูลจาก Google Apps Script (ไม่ต้อง auth เพราะมี secret key)
 router.post('/form-submission', async (req, res) => {
