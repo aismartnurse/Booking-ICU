@@ -130,6 +130,17 @@
   </div>
 </div>
 
+<!-- modal แก้ไขชื่อ/HN (ซ่อน เปิดด้วยจุดเล็ก + รหัส) -->
+<div class="modal-overlay" id="editPatientModal">
+  <div class="modal" style="max-width:360px;">
+    <h3 style="font-size:15px;">แก้ไขชื่อผู้ป่วย / HN</h3>
+    <input id="editName" placeholder="ชื่อ-สกุล" style="width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px;margin-bottom:8px;">
+    <input id="editHn" placeholder="HN" style="width:100%;padding:9px;border:1px solid #ccc;border-radius:8px;font-size:14px;">
+    <button onclick="saveEditedPatient()" style="width:100%;margin-top:12px;padding:10px;background:#06c755;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">💾 บันทึก</button>
+    <button class="modal-close" onclick="document.getElementById('editPatientModal').classList.remove('show')">ยกเลิก</button>
+  </div>
+</div>
+
 <!-- modal จัดการสิทธิ์ -->
 <div class="modal-overlay" id="settingsModal">
   <div class="modal" style="max-width:700px;">
@@ -592,10 +603,15 @@ async function showDetail(id) {
   var emergencyBadge = (extra.emergency && extra.emergency.toLowerCase().includes('yes'))
     ? '<span style="position:absolute;top:16px;right:50px;background:#e74c3c;color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;">🚨 Emer</span>'
     : '';
-  document.getElementById('detailTitle').innerHTML = (r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')'+emergencyBadge;
+  detailCtx = { id:id, name:(r.patient_name||''), hn:(r.patient_hn||'') };
+  document.getElementById('detailTitle').innerHTML = (r.patient_name||'-')+' (HN: '+(r.patient_hn||'-')+')'
+    + '<span onclick="editPatientPrompt()" title="" style="cursor:pointer;color:#e8e8e8;font-size:9px;margin-left:7px;vertical-align:middle;">●</span>'
+    + emergencyBadge;
   var rows=[
     ['เวลาที่ส่ง', new Date(r.submitted_at).toLocaleString('th-TH')],
     ['ประเภท', formTypeLabel[r.form_type]||r.form_type||'-'],
+    ['ชื่อ-สกุล', r.patient_name||'-'],
+    ['HN', r.patient_hn||'-'],
     ['หอผู้ป่วย', r.ward||'-'],
     ['Diagnosis', r.diagnosis||'-'],
     ['Underlying disease', extra.underlying||''],
@@ -615,13 +631,7 @@ async function showDetail(id) {
   ].filter(function(rv){ return rv[1] && rv[1]!=='-' && rv[1]!==''; });
 
   document.getElementById('detailBody').innerHTML =
-    '<div class="modal-row" style="flex-direction:column;gap:6px;align-items:stretch;">'
-    + '<b>ชื่อผู้ป่วย / HN (แก้ไขได้)</b>'
-    + '<input id="editName" value="'+(r.patient_name||'').replace(/"/g,'&quot;')+'" placeholder="ชื่อ-สกุล" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;">'
-    + '<input id="editHn" value="'+(r.patient_hn||'').replace(/"/g,'&quot;')+'" placeholder="HN" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;">'
-    + '<button onclick="savePatient('+id+')" style="padding:8px;background:#2980b9;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">💾 บันทึกชื่อ/HN</button>'
-    + '</div>'
-    + rows.map(function(rv){
+    rows.map(function(rv){
     return '<div class="modal-row"><b>'+rv[0]+'</b><span>'+rv[1]+'</span></div>';
   }).join('')
   + (r.form_type==='crisis' ? sosPanelHTML(extra) : '')
@@ -653,15 +663,26 @@ async function saveNote(id) {
   loadAll();
 }
 
-async function savePatient(id) {
+var detailCtx = null;
+async function editPatientPrompt() {
+  if (!detailCtx) return;
   var pw = await askPassword('ใส่รหัสผ่านเพื่อแก้ไขชื่อ/HN');
   if (pw === null) return;
   if (pw !== '0000') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
+  document.getElementById('editName').value = detailCtx.name || '';
+  document.getElementById('editHn').value = detailCtx.hn || '';
+  document.getElementById('editPatientModal').classList.add('show');
+}
+
+async function saveEditedPatient() {
+  if (!detailCtx) return;
+  var id = detailCtx.id;
   var name = document.getElementById('editName').value;
   var hn = document.getElementById('editHn').value;
   await fetch('/api/form-submissions/'+id+'/patient', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({patientName:name, patientHn:hn}) });
+  document.getElementById('editPatientModal').classList.remove('show');
   await loadAll();
-  showDetail(id);   // โหลดหน้ารายละเอียดใหม่ให้หัวข้ออัปเดต
+  showDetail(id);
 }
 
 function renderUsers(rows) {
