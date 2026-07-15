@@ -171,20 +171,8 @@ router.post('/form-submission', async (req, res) => {
        JSON.stringify(extraData || {})]
     );
 
-    // แจ้งเตือน LINE ทุก approver
-    const { notifyAllApprovers } = require('../lib/line');
-    const typeLabel = formType === 'or' ? '🔪 ICU for OR' : '🚨 ICU Crisis';
-    const extra = extraData || {};
-    const msg =
-      `🛏️ คำขอจองเตียง ICU ใหม่!\n` +
-      `ประเภท: ${typeLabel}\n` +
-      `ผู้ป่วย: ${patientName || '-'} (HN: ${patientHn || '-'})\n` +
-      `หอผู้ป่วย: ${ward || '-'}\n` +
-      `Diagnosis: ${diagnosis || '-'}\n` +
-      `ICU Type: ${icuType === 'unplan' ? 'Unplan' : 'Plan'}\n` +
-      (extra.booking_date ? `วันที่ต้องการ: ${extra.booking_date}\n` : '') +
-      (extra.emergency && extra.emergency.toLowerCase().includes('yes') ? `⚠️ Emergency!\n` : '');
-    notifyAllApprovers(msg).catch(console.error);
+    // ไม่ส่ง LINE หา approver แล้ว — ทีม ICU เห็นคำขอใหม่บน Dashboard (มีเสียงเตือน + รีเฟรชอัตโนมัติ)
+    // ช่วยประหยัดโควตาข้อความ LINE
 
     res.json({ ok: true, id: row.id });
   } catch (e) {
@@ -264,11 +252,9 @@ router.put('/form-submissions/:id/status', requireAdmin, async (req, res) => {
     `ประเภท: ${row.form_type === 'or' ? 'ICU for OR' : 'ICU Crisis'}\n` +
     `สถานะใหม่: ${statusLabel[status] || status}`;
 
-  const { notifyAllApprovers, pushText } = require('../lib/line');
+  const { pushText } = require('../lib/line');
 
-  // แจ้ง approver ทุกคน
-  notifyAllApprovers(msg).catch(console.error);
-
+  // ไม่ส่งหา approver แล้ว (ทีม ICU ดูจาก Dashboard) — แจ้งเฉพาะ ward ที่เกี่ยวข้อง
   // แจ้งกลับ ward — หา LINE user ที่ชื่อตรงกับ ward ใน form
   try {
     const wardName = (row.ward || '').toLowerCase().replace(/\s/g, '');
@@ -287,6 +273,16 @@ router.put('/form-submissions/:id/status', requireAdmin, async (req, res) => {
 router.put('/form-submissions/:id/note', requireAdmin, async (req, res) => {
   const { note } = req.body;
   await db.run('UPDATE form_submissions SET decision_note=$1, updated_at=NOW() WHERE id=$2', [note||null, req.params.id]);
+  res.json({ ok: true });
+});
+
+// แก้ไขชื่อผู้ป่วย / HN
+router.put('/form-submissions/:id/patient', requireAdmin, async (req, res) => {
+  const { patientName, patientHn } = req.body;
+  await db.run(
+    'UPDATE form_submissions SET patient_name=$1, patient_hn=$2, updated_at=NOW() WHERE id=$3',
+    [(patientName||'').trim() || null, (patientHn||'').trim() || null, req.params.id]
+  );
   res.json({ ok: true });
 });
 
@@ -324,7 +320,7 @@ router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => 
   }
 
   // แจ้งเตือน LINE
-  const { notifyAllApprovers, pushText } = require('../lib/line');
+  const { pushText } = require('../lib/line');
   let msg = '';
   if (admissionStatus === 'confirmed' && assignedBed) {
     msg =
@@ -346,7 +342,7 @@ router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => 
       (row.assigned_bed ? `\nออกจากเตียง ICU: ${row.assigned_bed}` : '');
   }
   if (msg) {
-    notifyAllApprovers(msg).catch(console.error);
+    // ไม่ส่งหา approver แล้ว (ทีม ICU ดูจาก Dashboard) — แจ้งเฉพาะ ward ที่เกี่ยวข้อง
     // แจ้งกลับ ward — ต้นทางและปลายทาง (ถ้าต่างกัน)
     try {
       const targetWards = [...new Set([row.ward, destWard].filter(Boolean))]
