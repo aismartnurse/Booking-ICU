@@ -18,12 +18,19 @@ app.use(cookieSession({
 }));
 
 app.use('/api', apiRouter);
+
+// เสิร์ฟ sw.js จาก root (Service Worker ต้องอยู่ที่ root)
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, 'sw.js'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
 const PORT = process.env.PORT || 3000;
 
-// เริ่ม server หลังจาก initDB สำเร็จ
 initDB()
   .then(() => {
     app.listen(PORT, () => console.log(`ICU Bed Booking server running on port ${PORT}`));
