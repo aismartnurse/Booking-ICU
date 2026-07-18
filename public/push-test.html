@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Push Notification Test</title>
+<style>
+  body{font-family:-apple-system,sans-serif;max-width:500px;margin:40px auto;padding:20px;background:#f4f6f8;}
+  h2{color:#06c755;border-bottom:2px solid #06c755;padding-bottom:8px;}
+  .card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .status{padding:10px 14px;border-radius:8px;margin:10px 0;font-size:13px;}
+  .ok{background:#eafaf1;color:#1e8449;}
+  .err{background:#fdecea;color:#c0392b;}
+  .warn{background:#fef9e7;color:#b7770d;}
+  button{padding:10px 20px;background:#06c755;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;margin:4px;}
+  button.red{background:#e74c3c;}
+  button.blue{background:#2980b9;}
+  select{padding:8px;border-radius:8px;border:1px solid #ddd;font-size:14px;width:100%;margin:6px 0;}
+  #log{background:#1a1a1a;color:#0f0;padding:14px;border-radius:8px;font-size:12px;font-family:monospace;min-height:80px;max-height:200px;overflow-y:auto;}
+</style>
+</head>
+<body>
+<h2>🔔 Push Notification Test</h2>
+
+<div class="card">
+  <b>1. เช็คสถานะระบบ</b>
+  <div id="sysStatus"></div>
+  <button onclick="checkSystem()">เช็คระบบ</button>
+</div>
+
+<div class="card">
+  <b>2. เลือก Ward และ Subscribe</b>
+  <select id="wardSel">
+    <option value="test">🧪 test</option>
+    <option value="Ward 5">Ward 5</option>
+    <option value="Ward 6">Ward 6</option>
+    <option value="Ward 7">Ward 7</option>
+    <option value="Ward 8">Ward 8</option>
+  </select>
+  <br>
+  <button onclick="doSubscribe()">📲 Subscribe (เปิดรับแจ้งเตือน)</button>
+  <button class="red" onclick="doUnsubscribe()">❌ Unsubscribe</button>
+  <div id="subStatus"></div>
+</div>
+
+<div class="card">
+  <b>3. ทดสอบส่ง Push</b>
+  <select id="testWard">
+    <option value="test">🧪 test</option>
+    <option value="Ward 5">Ward 5</option>
+    <option value="Ward 6">Ward 6</option>
+    <option value="Ward 7">Ward 7</option>
+    <option value="Ward 8">Ward 8</option>
+  </select>
+  <br>
+  <button class="blue" onclick="sendTest()">🚀 ส่ง Test Notification</button>
+  <div id="sendStatus"></div>
+</div>
+
+<div class="card">
+  <b>Log</b>
+  <div id="log">รอคำสั่ง...</div>
+</div>
+
+<script>
+var VAPID_PUBLIC_KEY = '';
+
+function log(msg) {
+  var el = document.getElementById('log');
+  el.innerHTML += '\n' + new Date().toLocaleTimeString('th-TH') + ' — ' + msg;
+  el.scrollTop = el.scrollHeight;
+}
+
+function status(id, msg, type) {
+  document.getElementById(id).innerHTML = '<div class="status ' + type + '">' + msg + '</div>';
+}
+
+async function checkSystem() {
+  log('เช็คระบบ...');
+  var msgs = [];
+
+  // Service Worker
+  if ('serviceWorker' in navigator) msgs.push('✅ Service Worker: รองรับ');
+  else { msgs.push('❌ Service Worker: ไม่รองรับ'); }
+
+  // Push Manager
+  if ('PushManager' in window) msgs.push('✅ Push API: รองรับ');
+  else msgs.push('❌ Push API: ไม่รองรับ');
+
+  // VAPID key
+  try {
+    var r = await fetch('/api/push/vapid-key');
+    var d = await r.json();
+    VAPID_PUBLIC_KEY = d.publicKey || '';
+    if (VAPID_PUBLIC_KEY) msgs.push('✅ VAPID Key: พร้อม (' + VAPID_PUBLIC_KEY.substring(0,20) + '...)');
+    else msgs.push('❌ VAPID Key: ไม่พบ (ตั้งค่าใน Render Environment)');
+  } catch(e) { msgs.push('❌ VAPID Key: ' + e.message); }
+
+  // SW registration
+  try {
+    var reg = await navigator.serviceWorker.register('/sw.js');
+    msgs.push('✅ sw.js: โหลดสำเร็จ');
+    log('sw.js scope: ' + reg.scope);
+  } catch(e) { msgs.push('❌ sw.js: ' + e.message); }
+
+  // Permission
+  var perm = Notification.permission;
+  if(perm === 'granted') msgs.push('✅ Permission: อนุญาตแล้ว');
+  else if(perm === 'denied') msgs.push('❌ Permission: ถูกบล็อก (ต้องรีเซ็ตใน Browser)');
+  else msgs.push('⚠️ Permission: ยังไม่ได้ขอ');
+
+  status('sysStatus', msgs.join('<br>'), perm==='denied'?'err':'ok');
+  log('เช็คระบบเสร็จ: ' + perm);
+}
+
+function urlBase64ToUint8Array(b64) {
+  var pad = '='.repeat((4 - b64.length % 4) % 4);
+  var b = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  var raw = atob(b); var out = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+async function doSubscribe() {
+  var ward = document.getElementById('wardSel').value;
+  log('กำลัง subscribe ' + ward + '...');
+  try {
+    if (!VAPID_PUBLIC_KEY) {
+      var r = await fetch('/api/push/vapid-key');
+      var d = await r.json();
+      VAPID_PUBLIC_KEY = d.publicKey;
+    }
+    var reg = await navigator.serviceWorker.ready;
+    var sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    var res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ward: ward, subscription: sub })
+    });
+    var d = await res.json();
+    if (d.ok) {
+      status('subStatus', '✅ Subscribe ' + ward + ' สำเร็จ!', 'ok');
+      log('Subscribe OK: ' + ward);
+    }
+  } catch(e) {
+    status('subStatus', '❌ Error: ' + e.message, 'err');
+    log('Subscribe Error: ' + e.message);
+  }
+}
+
+async function doUnsubscribe() {
+  log('กำลัง unsubscribe...');
+  try {
+    var reg = await navigator.serviceWorker.ready;
+    var sub = await reg.pushManager.getSubscription();
+    if (!sub) { status('subStatus', '⚠️ ยังไม่ได้ subscribe', 'warn'); return; }
+    await fetch('/api/push/unsubscribe', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ subscription: sub })
+    });
+    await sub.unsubscribe();
+    status('subStatus', '✅ Unsubscribe สำเร็จ', 'ok');
+    log('Unsubscribe OK');
+  } catch(e) {
+    status('subStatus', '❌ Error: ' + e.message, 'err');
+    log('Unsubscribe Error: ' + e.message);
+  }
+}
+
+async function sendTest() {
+  var ward = document.getElementById('testWard').value;
+  log('กำลังส่ง test push ไปยัง ' + ward + '...');
+  try {
+    var res = await fetch('/api/push/test', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ward: ward })
+    });
+    var d = await res.json();
+    if (d.ok) {
+      status('sendStatus', '✅ ส่ง push สำเร็จ! ส่งไปยัง ' + (d.sent||0) + ' อุปกรณ์', 'ok');
+      log('Push sent to ' + ward + ': ' + (d.sent||0) + ' devices');
+    } else {
+      status('sendStatus', '❌ ' + (d.error||'unknown error'), 'err');
+    }
+  } catch(e) {
+    status('sendStatus', '❌ Error: ' + e.message, 'err');
+    log('Send Error: ' + e.message);
+  }
+}
+
+// auto check on load
+checkSystem();
+</script>
+</body>
+</html>
