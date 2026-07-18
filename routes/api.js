@@ -366,4 +366,29 @@ router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => 
   res.json({ ok: true });
 });
 
+```javascript
+// ===== Web Push =====
+router.get('/push/vapid-key', (req, res) => {
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || '' });
+});
+
+router.post('/push/subscribe', async (req, res) => {
+  const { ward, subscription } = req.body;
+  if (!ward || !subscription) return res.status(400).json({ error: 'missing' });
+  await db.run(
+    'INSERT INTO push_subscriptions (ward, subscription) VALUES ($1, $2)',
+    [ward, JSON.stringify(subscription)]
+  );
+  res.json({ ok: true });
+});
+
+router.post('/push/unsubscribe', async (req, res) => {
+  const { subscription } = req.body;
+  await db.run(
+    'DELETE FROM push_subscriptions WHERE subscription = $1',
+    [JSON.stringify(subscription)]
+  );
+  res.json({ ok: true });
+});
+
 module.exports = router;
