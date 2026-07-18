@@ -366,7 +366,6 @@ router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => 
   res.json({ ok: true });
 });
 
-```javascript
 // ===== Web Push =====
 router.get('/push/vapid-key', (req, res) => {
   res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || '' });
