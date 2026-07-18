@@ -366,6 +366,40 @@ router.put('/form-submissions/:id/admission', requireAdmin, async (req, res) => 
   res.json({ ok: true });
 });
 
+router.post('/push/test', requireAdmin, async (req, res) => {
+  const { ward } = req.body;
+  if (!ward) return res.status(400).json({ error: 'missing ward' });
+  if (!process.env.VAPID_PUBLIC_KEY) return res.status(500).json({ error: 'VAPID keys not configured' });
+  try {
+    const webpush = require('web-push');
+    webpush.setVapidDetails(
+      'mailto:admin@hospital.com',
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    );
+    const subs = await db.all('SELECT subscription FROM push_subscriptions WHERE ward = $1', [ward]);
+    const payload = JSON.stringify({
+      title: '🔔 ทดสอบระบบแจ้งเตือน',
+      body: 'ระบบ Push Notification ของ ' + ward + ' ทำงานปกติ ✅'
+    });
+    let sent = 0;
+    for (const row of subs) {
+      try {
+        const sub = typeof row.subscription === 'string' ? JSON.parse(row.subscription) : row.subscription;
+        await webpush.sendNotification(sub, payload);
+        sent++;
+      } catch(e) {
+        if (e.statusCode === 410) {
+          await db.run('DELETE FROM push_subscriptions WHERE subscription = $1', [JSON.stringify(row.subscription)]);
+        }
+      }
+    }
+    res.json({ ok: true, sent, total: subs.length });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---------- Web Push ----------
 router.get('/push/vapid-key', (req, res) => {
   res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || '' });
