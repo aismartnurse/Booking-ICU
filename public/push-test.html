@@ -23,7 +23,11 @@
 <h2>🔔 Push Notification Test</h2>
 
 <div class="card">
-  <b>1. เช็คสถานะระบบ</b>
+  <b>0. ทดสอบ Local Notification (ไม่ผ่าน server)</b>
+  <p style="font-size:12px;color:#666;margin:6px 0;">กดปุ่มนี้เพื่อเช็คว่า browser แสดง notification ได้ไหม</p>
+  <button class="blue" onclick="testLocal()">🔔 แสดง Local Notification</button>
+  <div id="localStatus"></div>
+</div>
   <div id="sysStatus"></div>
   <button onclick="checkSystem()">เช็คระบบ</button>
 </div>
@@ -73,6 +77,29 @@ function log(msg) {
 
 function status(id, msg, type) {
   document.getElementById(id).innerHTML = '<div class="status ' + type + '">' + msg + '</div>';
+}
+
+async function testLocal() {
+  log('ทดสอบ local notification...');
+  try {
+    var perm = await Notification.requestPermission();
+    log('Permission: ' + perm);
+    if (perm !== 'granted') {
+      status('localStatus', '❌ Permission: ' + perm + ' — ต้องกด Allow ก่อน', 'err');
+      return;
+    }
+    var reg = await navigator.serviceWorker.ready;
+    await reg.showNotification('🔔 ทดสอบ Local', {
+      body: 'ถ้าเห็นข้อความนี้ notification ทำงานได้ปกติ',
+      tag: 'local-test',
+      requireInteraction: false,
+    });
+    status('localStatus', '✅ ส่ง local notification แล้ว ดูที่มุมจอ/notification bar', 'ok');
+    log('Local notification sent OK');
+  } catch(e) {
+    status('localStatus', '❌ Error: ' + e.message, 'err');
+    log('Local Error: ' + e.message);
+  }
 }
 
 async function checkSystem() {
