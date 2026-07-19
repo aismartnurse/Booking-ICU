@@ -7,65 +7,87 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,"Segoe UI",sans-serif;background:#f4f6f8;color:#1a1a1a}
-  header{background:linear-gradient(135deg,#06c755,#04a844);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:flex-start}
-  .header-left h1{font-size:18px;font-weight:700}
-  .header-left p{font-size:12px;opacity:.85;margin-top:3px}
-  .clock{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
-  .clock-date{font-size:11px;opacity:.85;text-align:right;margin-top:2px}
-  main{max-width:1100px;margin:0 auto;padding:16px}
 
-  /* Push bar */
-  #push-bar{background:#fff;border-radius:10px;padding:12px 16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+  /* Alert bar */
+  #alert-bar{display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#e74c3c;color:#fff;padding:14px 20px;flex-direction:column;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+  #alert-bar .alert-title{font-size:15px;font-weight:700;}
+  #alert-bar .alert-items{font-size:13px;opacity:.9;max-height:80px;overflow-y:auto;}
+  #alert-bar button{align-self:flex-end;padding:8px 20px;background:#fff;color:#e74c3c;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;}
 
-  /* Summary */
-  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
-  .summary-card{background:#fff;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07)}
-  .summary-card .num{font-size:28px;font-weight:800;margin-bottom:4px}
-  .summary-card .lbl{font-size:11px;color:#666}
+  header{background:linear-gradient(135deg,#06c755,#04a844);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:flex-start;margin-top:0;}
+  header h1{font-size:18px;font-weight:700;}
+  header p{font-size:12px;opacity:.85;margin-top:3px;}
+  .clock{font-size:22px;font-weight:700;}
+  .clock-date{font-size:11px;opacity:.85;text-align:right;margin-top:2px;}
+
+  main{max-width:1100px;margin:0 auto;padding:16px;}
+
+  /* Sound unlock banner */
+  #sound-banner{background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;font-size:13px;}
+  #sound-banner button{padding:7px 16px;background:#06c755;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;}
+
+  /* Ward selector */
+  #ward-selector{background:#fff;border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+  #ward-selector h3{font-size:14px;font-weight:700;margin-bottom:10px;}
+  .ward-btns{display:flex;gap:8px;flex-wrap:wrap;}
+  .ward-btn{padding:8px 18px;border:2px solid #06c755;border-radius:8px;cursor:pointer;font-size:13px;background:#fff;color:#06c755;font-weight:600;}
+  .ward-btn.active{background:#06c755;color:#fff;}
+  .ward-btn:hover{background:#06c755;color:#fff;}
+
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+  .summary-card{background:#fff;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+  .summary-card .num{font-size:28px;font-weight:800;margin-bottom:4px;}
+  .summary-card .lbl{font-size:11px;color:#666;}
   .num.green{color:#06c755}.num.red{color:#e74c3c}.num.orange{color:#f39c12}.num.gray{color:#888}
 
-  /* Beds */
-  .section{background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
-  .section h2{font-size:14px;font-weight:700;border-left:4px solid #06c755;padding-left:8px;margin-bottom:12px}
-  .legend{display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap}
-  .legend span{font-size:12px;display:flex;align-items:center;gap:5px}
-  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .section{background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+  .section h2{font-size:14px;font-weight:700;border-left:4px solid #06c755;padding-left:8px;margin-bottom:12px;}
+  .legend{display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap;}
+  .legend span{font-size:12px;display:flex;align-items:center;gap:5px;}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
   .dot.available{background:#27ae60}.dot.occupied{background:#e74c3c}.dot.cleaning{background:#f39c12}.dot.closed{background:#aaa}
-  .beds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
-  .bed-card{border-radius:10px;padding:12px 8px;text-align:center;font-weight:700;font-size:14px;min-height:70px;display:flex;flex-direction:column;justify-content:center;align-items:center}
-  .bed-card.available{background:#eafaf1;color:#1e8449;border:1.5px solid #27ae60}
-  .bed-card.occupied{background:#fdecea;color:#c0392b;border:1.5px solid #e74c3c}
-  .bed-card.cleaning{background:#fef9e7;color:#b7770d;border:1.5px solid #f39c12}
-  .bed-card.closed{background:#f4f4f4;color:#888;border:1.5px solid #ccc}
-  .bed-card small{display:block;font-size:11px;font-weight:600;margin-top:4px;line-height:1.3}
-  .bed-card .hn{font-size:10px;font-weight:400;opacity:.8}
+  .beds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;}
+  .bed-card{border-radius:10px;padding:12px 8px;text-align:center;font-weight:700;font-size:14px;min-height:70px;display:flex;flex-direction:column;justify-content:center;align-items:center;}
+  .bed-card.available{background:#eafaf1;color:#1e8449;border:1.5px solid #27ae60;}
+  .bed-card.occupied{background:#fdecea;color:#c0392b;border:1.5px solid #e74c3c;}
+  .bed-card.cleaning{background:#fef9e7;color:#b7770d;border:1.5px solid #f39c12;}
+  .bed-card.closed{background:#f4f4f4;color:#888;border:1.5px solid #ccc;}
+  .bed-card small{display:block;font-size:12px;font-weight:600;margin-top:4px;line-height:1.3;}
+  .bed-card .hn{font-size:10px;font-weight:400;opacity:.8;}
 
-  /* Table */
-  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  table{width:100%;border-collapse:collapse;min-width:600px}
-  th{background:#f8f9fa;padding:10px 10px;font-size:12px;text-align:left;color:#555;border-bottom:2px solid #eee;white-space:nowrap}
-  td{padding:10px 10px;font-size:12px;border-bottom:1px solid #f0f0f0}
-  tr:last-child td{border-bottom:none}
-  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
-  .badge.or{background:#f5eef8;color:#7d3c98}
-  .badge.crisis{background:#fdecea;color:#c0392b}
-  .badge.plan{background:#eaf2fb;color:#1a5276}
-  .badge.unplan{background:#fdecea;color:#c0392b}
-  .empty{text-align:center;color:#aaa;padding:20px}
-  .refresh-note{text-align:center;font-size:11px;color:#aaa;margin-top:12px}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{width:100%;border-collapse:collapse;min-width:600px;}
+  th{background:#f8f9fa;padding:10px;font-size:12px;text-align:left;color:#555;border-bottom:2px solid #eee;white-space:nowrap;}
+  td{padding:10px;font-size:12px;border-bottom:1px solid #f0f0f0;}
+  tr:last-child td{border-bottom:none;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;}
+  .badge.or{background:#f5eef8;color:#7d3c98;}
+  .badge.crisis{background:#fdecea;color:#c0392b;}
+  .badge.plan{background:#eaf2fb;color:#1a5276;}
+  .badge.unplan{background:#fdecea;color:#c0392b;}
+  .empty{text-align:center;color:#aaa;padding:20px;}
+  .refresh-note{text-align:center;font-size:11px;color:#aaa;margin-top:12px;}
 
   @media(max-width:600px){
-    .summary{grid-template-columns:repeat(2,1fr)}
-    header{flex-direction:column;gap:8px}
-    .clock{font-size:18px}
+    .summary{grid-template-columns:repeat(2,1fr);}
+    header{flex-direction:column;gap:8px;}
+    .clock{font-size:18px;}
   }
 </style>
 </head>
 <body>
-<header>
-  <div class="header-left">
+
+<!-- Alert Bar -->
+<div id="alert-bar">
+  <div class="alert-title">🔔 มีการอัปเดตสำหรับ <span id="alert-ward-name"></span></div>
+  <div class="alert-items" id="alert-items"></div>
+  <button onclick="dismissAlert()">✅ รับทราบ</button>
+</div>
+
+<header id="main-header" style="margin-top:0;">
+  <div>
     <h1>🏥 สถานะเตียง ICU</h1>
-    <p>ข้อมูล real-time สำหรับบุคลากรทุกแผนก</p>
+    <p id="ward-label">ข้อมูล real-time สำหรับบุคลากรทุกแผนก</p>
   </div>
   <div>
     <div class="clock" id="clock"></div>
@@ -74,18 +96,24 @@
 </header>
 
 <main>
-  <!-- Alert bar -->
-  <div id="alert-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#e74c3c;color:#fff;padding:14px 20px;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
-    <span style="font-size:15px;font-weight:700;">🔔 มีคำขอใหม่สำหรับ <span id="alertWardName"></span> รอดำเนินการ!</span>
-    <button onclick="ackAlert()" style="padding:8px 20px;background:#fff;color:#e74c3c;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">✅ รับทราบ</button>
+  <!-- Sound unlock -->
+  <div id="sound-banner">
+    <span>🔔 กดปุ่มเพื่อเปิดเสียงแจ้งเตือน (ทำครั้งเดียว)</span>
+    <button onclick="unlockSound()">เปิดเสียง</button>
   </div>
 
-  <!-- Push Notification Bar -->
-  <div class="section" id="push-bar">
-    <div id="push-container">กำลังโหลด...</div>
+  <!-- Ward selector -->
+  <div id="ward-selector">
+    <h3>📍 เลือก Ward ของคุณ (รับแจ้งเตือนเฉพาะ ward นี้)</h3>
+    <div class="ward-btns">
+      <button class="ward-btn" onclick="selectWard('')">ทั้งหมด</button>
+      <button class="ward-btn" onclick="selectWard('Ward 5')">Ward 5</button>
+      <button class="ward-btn" onclick="selectWard('Ward 6')">Ward 6</button>
+      <button class="ward-btn" onclick="selectWard('Ward 7')">Ward 7</button>
+      <button class="ward-btn" onclick="selectWard('Ward 8')">Ward 8</button>
+    </div>
   </div>
 
-  <!-- Summary -->
   <div class="summary">
     <div class="summary-card"><div class="num green" id="numAvailable">-</div><div class="lbl">เตียงว่าง</div></div>
     <div class="summary-card"><div class="num red" id="numOccupied">-</div><div class="lbl">มีผู้ป่วย</div></div>
@@ -93,7 +121,6 @@
     <div class="summary-card"><div class="num gray" id="numTotal">-</div><div class="lbl">เตียงทั้งหมด</div></div>
   </div>
 
-  <!-- Beds -->
   <div class="section">
     <h2>สถานะเตียงแต่ละเตียง</h2>
     <div class="legend">
@@ -105,12 +132,11 @@
     <div class="beds-grid" id="bedsGrid"><div class="empty">กำลังโหลด...</div></div>
   </div>
 
-  <!-- Requests -->
   <div class="section">
-    <h2 id="requestTitle">คำขอที่รอดำเนินการ</h2>
+    <h2 id="requestTitle">คำขอทั้งหมด</h2>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>วันที่ส่งคำขอ</th><th>ผู้ป่วย</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>วันที่ต้องการใช้เตียง</th><th>ความเร่งด่วน</th><th>สถานะ</th><th>ICU Type</th></tr></thead>
+        <thead><tr><th>วันที่ส่ง</th><th>ผู้ป่วย</th><th>หอผู้ป่วย</th><th>ประเภท</th><th>วันที่ต้องการ</th><th>ความเร่งด่วน</th><th>สถานะ</th><th>ICU Type</th></tr></thead>
         <tbody id="pendingBody"><tr><td colspan="8" class="empty">กำลังโหลด...</td></tr></tbody>
       </table>
     </div>
@@ -119,84 +145,35 @@
 </main>
 
 <script>
-// รับ message จาก Service Worker → เล่นเสียงกริ่ง
-navigator.serviceWorker.addEventListener('message', function(e) {
-  if (e.data && e.data.type === 'PLAY_SOUND') {
-    playBell10();
-  }
-});
-
-var bellInterval = null;
-var audioCtx = null;
-var audioUnlocked = false;
-
-function unlockAudio() {
-  if (audioUnlocked) return;
-  try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    var o=audioCtx.createOscillator(),g=audioCtx.createGain();
-    o.connect(g);g.connect(audioCtx.destination);
-    g.gain.setValueAtTime(0.01,audioCtx.currentTime);
-    o.start();o.stop(audioCtx.currentTime+0.01);
-    audioUnlocked=true;
-  } catch(e){}
-}
-
-function playBell(ctx) {
-  [[0,1760],[0.08,880],[0.16,1760],[0.24,880]].forEach(function(p){
-    var o=ctx.createOscillator(),g=ctx.createGain();
-    o.connect(g);g.connect(ctx.destination);
-    o.frequency.value=p[1];o.type='sine';
-    g.gain.setValueAtTime(0.5,ctx.currentTime+p[0]);
-    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+p[0]+0.35);
-    o.start(ctx.currentTime+p[0]);
-    o.stop(ctx.currentTime+p[0]+0.4);
-  });
-}
-
-function playBell10() {
-  if(bellInterval) return;
-  if(!audioCtx){
-    try{ audioCtx=new(window.AudioContext||window.webkitAudioContext)();audioUnlocked=true; }catch(e){return;}
-  }
-  if(audioCtx.state==='suspended') audioCtx.resume();
-  var bar=document.getElementById('alert-bar');
-  if(bar){
-    bar.style.display='flex';
-    var wn=document.getElementById('alertWardName');
-    if(wn) wn.textContent=currentWard||'';
-  }
-  playBell(audioCtx);
-  var count=0;
-  bellInterval=setInterval(function(){
-    count++;
-    if(count>=10){clearInterval(bellInterval);bellInterval=null;return;}
-    playBell(audioCtx);
-  },1000);
-}
-
-function ackAlert() {
-  if(bellInterval){clearInterval(bellInterval);bellInterval=null;}
-  var bar=document.getElementById('alert-bar');
-  if(bar) bar.style.display='none';
-}
-
-document.addEventListener('click',function(){unlockAudio();},{once:true});
+// ===== State =====
 var currentWard = new URLSearchParams(window.location.search).get('ward') || '';
-var WARDS = ['Ward 5','Ward 6','Ward 7','Ward 8'];
+var previousStatuses = {}; // { id: status } เก็บสถานะเดิม
+var audioCtx = null;
+var soundUnlocked = false;
+var bellPlaying = false;
+
+// ===== Labels =====
 var bedStatusLabel = {available:'ว่าง',occupied:'มีผู้ป่วย',cleaning:'ทำความสะอาด',closed:'ปิดใช้งาน'};
 var urgDot = {emergency:'🔴',urgent:'🟡',normal:'🟢'};
 var formType = {or:'OR',crisis:'Crisis'};
 var icuType = {plan:'Plan',unplan:'Unplan'};
 var statusLabel = {
-  pending:'⏳ รอดำเนินการ',acknowledged:'✅ รับทราบ รอดำเนินการ',
-  waiting_bed:'🟡 รับทราบ รอเตียงว่าง',completed:'🎉 ดำเนินการเสร็จสิ้น'
+  pending:'⏳ รอดำเนินการ',
+  acknowledged:'✅ รับทราบ รอดำเนินการ',
+  waiting_bed:'🟡 รับทราบ รอเตียงว่าง',
+  completed:'🎉 ดำเนินการเสร็จสิ้น',
+  failed:'❌ ไม่สำเร็จ'
 };
-var statusColor = {pending:'#b9770e',acknowledged:'#1e8449',waiting_bed:'#b7770d',completed:'#1a5276'};
-var statusBg = {pending:'#fef5e7',acknowledged:'#eafaf1',waiting_bed:'#fef9e7',completed:'#d6eaf8'};
-var rowBg = {pending:'#fffdf5',acknowledged:'#f0fff4',waiting_bed:'#fffde7',completed:'#e8f4fd'};
+var statusBg = {
+  pending:'#fffdf5',acknowledged:'#f0fff4',
+  waiting_bed:'#fffde7',completed:'#e8f4fd',failed:'#fff5f5'
+};
+var statusColor = {
+  pending:'#b9770e',acknowledged:'#1e8449',
+  waiting_bed:'#b7770d',completed:'#1a5276',failed:'#c0392b'
+};
 
-// Clock
+// ===== Clock =====
 function updateClock(){
   var now=new Date();
   document.getElementById('clock').textContent=now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -204,110 +181,156 @@ function updateClock(){
 }
 updateClock(); setInterval(updateClock,1000);
 
-// Push init
-async function initPush(){
-  // ดึง VAPID key ก่อน
-  try {
-    var res = await fetch('/api/push/vapid-key');
-    var data = await res.json();
-    VAPID_PUBLIC_KEY = data.publicKey || '';
-  } catch(e) {}
+// ===== Ward selector =====
+function selectWard(ward) {
+  currentWard = ward;
+  // อัปเดต URL
+  var url = new URL(window.location.href);
+  if (ward) url.searchParams.set('ward', ward);
+  else url.searchParams.delete('ward');
+  window.history.replaceState({}, '', url);
 
-  var container = document.getElementById('push-container');
-  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!VAPID_PUBLIC_KEY){
-    container.innerHTML='<span style="font-size:12px;color:#999;">เปิดหน้านี้บน Chrome/Android เพื่อรับแจ้งเตือน</span>';
-    return;
-  }
-  if(!currentWard){
-    container.innerHTML='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
-      +'<span style="font-size:13px;font-weight:600;">🔔 เปิดแจ้งเตือนสำหรับ:</span>'
-      +WARDS.map(w=>'<button onclick="selectWard(\''+w+'\')" style="padding:6px 14px;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-size:13px;background:#fff;">'+w+'</button>').join('')
-      +'</div>';
-    return;
-  }
-  checkPushStatus();
+  // อัปเดต UI
+  document.querySelectorAll('.ward-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.textContent === (ward||'ทั้งหมด'));
+  });
+  document.getElementById('ward-label').textContent = ward ? 'แสดงข้อมูลสำหรับ ' + ward : 'ข้อมูล real-time สำหรับบุคลากรทุกแผนก';
+  document.getElementById('alert-ward-name').textContent = ward || 'ward ของคุณ';
+  document.getElementById('requestTitle').textContent = ward ? 'คำขอของ ' + ward : 'คำขอทั้งหมด';
+
+  // reset สถานะเดิม
+  previousStatuses = {};
+  loadData();
 }
 
-function selectWard(w){ window.location.href='/status.html?ward='+encodeURIComponent(w); }
-
-async function checkPushStatus(){
-  var container=document.getElementById('push-container');
+// ===== Sound =====
+function unlockSound() {
   try {
-    var reg=await navigator.serviceWorker.register('/sw.js');
-    var sub=await reg.pushManager.getSubscription();
-    if(sub){
-      container.innerHTML='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-        +'<span style="font-size:13px;color:#06c755;font-weight:600;">🔔 แจ้งเตือน '+currentWard+' เปิดอยู่</span>'
-        +'<button onclick="unsubscribePush()" style="padding:4px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;cursor:pointer;background:#fff;">ปิด</button>'
-        +'<a href="/status.html" style="font-size:12px;color:#888;text-decoration:none;">เปลี่ยน Ward</a>'
-        +'</div>';
-    } else {
-      container.innerHTML='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-        +'<span style="font-size:13px;color:#555;">🔕 '+currentWard+'</span>'
-        +'<button onclick="subscribePush()" style="padding:7px 16px;background:#06c755;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">เปิดรับแจ้งเตือน</button>'
-        +'<a href="/status.html" style="font-size:12px;color:#888;text-decoration:none;">เปลี่ยน Ward</a>'
-        +'</div>';
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.connect(g);g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.01,audioCtx.currentTime);
+    o.start();o.stop(audioCtx.currentTime+0.01);
+    soundUnlocked = true;
+    document.getElementById('sound-banner').innerHTML =
+      '<span style="color:#1e8449;font-weight:600;">🔔 เสียงแจ้งเตือนเปิดอยู่</span>';
+  } catch(e) {
+    alert('ไม่สามารถเปิดเสียงได้: ' + e.message);
+  }
+}
+
+function playBell() {
+  if (!soundUnlocked || !audioCtx || bellPlaying) return;
+  bellPlaying = true;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  var count = 0;
+  function ring() {
+    if (!soundUnlocked || !audioCtx) { bellPlaying=false; return; }
+    [[0,1760],[0.08,880],[0.16,1760],[0.24,880]].forEach(function(p){
+      var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.connect(g);g.connect(audioCtx.destination);
+      o.frequency.value=p[1];o.type='sine';
+      g.gain.setValueAtTime(0.5,audioCtx.currentTime+p[0]);
+      g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+p[0]+0.35);
+      o.start(audioCtx.currentTime+p[0]);
+      o.stop(audioCtx.currentTime+p[0]+0.4);
+    });
+    count++;
+    if (count < 10) setTimeout(ring, 1000);
+    else bellPlaying = false;
+  }
+  ring();
+}
+
+function dismissAlert() {
+  document.getElementById('alert-bar').style.display = 'none';
+  bellPlaying = false;
+}
+
+// ===== Detect status change =====
+function checkChanges(submissions) {
+  var wardSubs = currentWard
+    ? submissions.filter(function(r){ return r.ward === currentWard; })
+    : submissions;
+
+  var changed = [];
+
+  wardSubs.forEach(function(r) {
+    var prev = previousStatuses[r.id];
+    var curr = r.status || 'pending';
+
+    if (prev !== undefined && prev !== curr) {
+      // สถานะเปลี่ยน!
+      changed.push({
+        name: r.patient_name || '-',
+        hn: r.patient_hn || '-',
+        ward: r.ward || '-',
+        from: statusLabel[prev] || prev,
+        to: statusLabel[curr] || curr
+      });
     }
-  } catch(e){
-    container.innerHTML='<span style="font-size:12px;color:#e74c3c;">เกิดข้อผิดพลาด: '+e.message+'</span>';
+    previousStatuses[r.id] = curr;
+  });
+
+  if (changed.length > 0 && Object.keys(previousStatuses).length > wardSubs.length) {
+    // ไม่ alert ตอน load ครั้งแรก
+  } else if (changed.length > 0) {
+    showAlert(changed);
   }
 }
 
-function urlBase64ToUint8Array(b64){
-  var pad='='.repeat((4-b64.length%4)%4);
-  var b=(b64+pad).replace(/-/g,'+').replace(/_/g,'/');
-  var raw=atob(b); var out=new Uint8Array(raw.length);
-  for(var i=0;i<raw.length;i++) out[i]=raw.charCodeAt(i);
-  return out;
+function showAlert(changes) {
+  var bar = document.getElementById('alert-bar');
+  var items = document.getElementById('alert-items');
+  bar.style.display = 'flex';
+  // เลื่อน header ลง
+  document.getElementById('main-header').style.marginTop = bar.offsetHeight + 'px';
+
+  items.innerHTML = changes.map(function(c) {
+    return '• ' + c.name + ' (HN: ' + c.hn + ') ' + c.ward + ' → ' + c.to;
+  }).join('<br>');
+
+  playBell();
 }
 
-async function subscribePush(){
-  try{
-    var reg=await navigator.serviceWorker.ready;
-    var sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});
-    await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ward:currentWard,subscription:sub})});
-    checkPushStatus();
-  }catch(e){ alert('ไม่สามารถเปิดได้: '+e.message); }
-}
+// ===== Load data =====
+async function loadData() {
+  try {
+    var beds = await fetch('/api/beds').then(function(r){return r.json();});
+    var all = await fetch('/api/public/form-submissions').then(function(r){return r.json();});
+    var isFirst = Object.keys(previousStatuses).length === 0;
 
-async function unsubscribePush(){
-  var reg=await navigator.serviceWorker.ready;
-  var sub=await reg.pushManager.getSubscription();
-  if(sub){
-    await fetch('/api/push/unsubscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub})});
-    await sub.unsubscribe();
-  }
-  checkPushStatus();
-}
+    // เช็คการเปลี่ยนแปลง (ไม่เช็คครั้งแรก)
+    if (!isFirst) checkChanges(all);
 
-// Load data
-async function loadData(){
-  try{
-    var beds=await fetch('/api/beds').then(r=>r.json());
-    var all=await fetch('/api/public/form-submissions').then(r=>r.json());
+    // บันทึกสถานะปัจจุบันครั้งแรก
+    if (isFirst) {
+      all.forEach(function(r) {
+        previousStatuses[r.id] = r.status || 'pending';
+      });
+    }
 
-    // filter เฉพาะ ward ถ้าเลือกไว้
+    // filter ward
     var pending = currentWard
-      ? all.filter(r=>r.ward===currentWard)
+      ? all.filter(function(r){ return r.ward === currentWard; })
       : all;
 
-    // update title
-    document.getElementById('requestTitle').textContent =
-      currentWard ? 'คำขอของ '+currentWard : 'คำขอทั้งหมดที่รอดำเนินการ';
-
-    // summary
+    // summary beds
     var c={available:0,occupied:0,cleaning:0,closed:0};
-    beds.forEach(b=>{ if(c[b.status]!==undefined) c[b.status]++; });
+    beds.forEach(function(b){ if(c[b.status]!==undefined) c[b.status]++; });
     document.getElementById('numAvailable').textContent=c.available;
     document.getElementById('numOccupied').textContent=c.occupied;
     document.getElementById('numCleaning').textContent=c.cleaning;
     document.getElementById('numTotal').textContent=beds.length;
 
-    // beds
+    // beds grid
     var patientMap={};
-    all.forEach(r=>{ if(r.admission_status==='confirmed'&&r.assigned_bed) patientMap[r.assigned_bed]={name:r.patient_name||'-',hn:r.patient_hn||'-'}; });
-
-    document.getElementById('bedsGrid').innerHTML=beds.map(b=>{
+    all.forEach(function(r){
+      if(r.admission_status==='confirmed'&&r.assigned_bed)
+        patientMap[r.assigned_bed]={name:r.patient_name||'-',hn:r.patient_hn||'-'};
+    });
+    document.getElementById('bedsGrid').innerHTML=beds.map(function(b){
       var pt=patientMap[b.label];
       var info=(b.status==='occupied'&&pt)
         ?'<small style="font-size:13px;font-weight:700;margin-top:4px;line-height:1.3;">'+pt.name+'</small><div class="hn">HN: '+pt.hn+'</div>'
@@ -316,11 +339,11 @@ async function loadData(){
     }).join('');
 
     // table
-    document.getElementById('pendingBody').innerHTML=pending.length
-      ? pending.map(r=>{
+    document.getElementById('pendingBody').innerHTML = pending.length
+      ? pending.map(function(r){
           var extra=typeof r.extra_data==='string'?JSON.parse(r.extra_data):(r.extra_data||{});
           var st=r.status||'pending';
-          var bg=rowBg[st]||'#fff';
+          var bg=statusBg[st]||'#fff';
           var sc=statusColor[st]||'#b9770e';
           var sb=statusBg[st]||'#fef5e7';
           return '<tr style="background:'+bg+';">'
@@ -334,15 +357,26 @@ async function loadData(){
             +'<td>'+(r.icu_type?'<span class="badge '+r.icu_type+'">'+(icuType[r.icu_type]||'-')+'</span>':'-')+'</td>'
             +'</tr>';
         }).join('')
-      : '<tr><td colspan="8" class="empty">✅ ไม่มีคำขอ'+(currentWard?' ของ '+currentWard:'')+'ในขณะนี้</td></tr>';
-  }catch(e){
-    console.error(e);
-  }
+      : '<tr><td colspan="8" class="empty">✅ ไม่มีคำขอ'+(currentWard?' ของ '+currentWard:'')+'</td></tr>';
+
+  } catch(e) { console.error(e); }
 }
 
-initPush();
+// ===== Init =====
+// ตั้งค่า ward จาก URL
+if (currentWard) {
+  document.querySelectorAll('.ward-btn').forEach(function(btn){
+    btn.classList.toggle('active', btn.textContent === currentWard);
+  });
+  document.getElementById('ward-label').textContent = 'แสดงข้อมูลสำหรับ ' + currentWard;
+  document.getElementById('alert-ward-name').textContent = currentWard;
+  document.getElementById('requestTitle').textContent = 'คำขอของ ' + currentWard;
+} else {
+  document.querySelector('.ward-btn').classList.add('active');
+}
+
 loadData();
-setInterval(loadData,30000);
+setInterval(loadData, 30000);
 </script>
 </body>
 </html>
