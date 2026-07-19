@@ -259,29 +259,21 @@ function checkChanges(submissions) {
     : submissions;
 
   var changed = [];
-
   wardSubs.forEach(function(r) {
     var prev = previousStatuses[r.id];
     var curr = r.status || 'pending';
-
     if (prev !== undefined && prev !== curr) {
-      // สถานะเปลี่ยน!
       changed.push({
         name: r.patient_name || '-',
         hn: r.patient_hn || '-',
         ward: r.ward || '-',
-        from: statusLabel[prev] || prev,
         to: statusLabel[curr] || curr
       });
     }
     previousStatuses[r.id] = curr;
   });
 
-  if (changed.length > 0 && Object.keys(previousStatuses).length > wardSubs.length) {
-    // ไม่ alert ตอน load ครั้งแรก
-  } else if (changed.length > 0) {
-    showAlert(changed);
-  }
+  if (changed.length > 0) showAlert(changed);
 }
 
 function showAlert(changes) {
@@ -305,15 +297,15 @@ async function loadData() {
     var all = await fetch('/api/public/form-submissions').then(function(r){return r.json();});
     var isFirst = Object.keys(previousStatuses).length === 0;
 
+    // บันทึกสถานะปัจจุบัน
+    var newStatuses = {};
+    all.forEach(function(r) { newStatuses[r.id] = r.status || 'pending'; });
+
     // เช็คการเปลี่ยนแปลง (ไม่เช็คครั้งแรก)
     if (!isFirst) checkChanges(all);
 
-    // บันทึกสถานะปัจจุบันครั้งแรก
-    if (isFirst) {
-      all.forEach(function(r) {
-        previousStatuses[r.id] = r.status || 'pending';
-      });
-    }
+    // อัปเดต previousStatuses
+    previousStatuses = newStatuses;
 
     // filter ward
     var pending = currentWard
