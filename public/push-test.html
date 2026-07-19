@@ -85,17 +85,26 @@ async function testLocal() {
     var perm = await Notification.requestPermission();
     log('Permission: ' + perm);
     if (perm !== 'granted') {
-      status('localStatus', '❌ Permission: ' + perm + ' — ต้องกด Allow ก่อน', 'err');
+      status('localStatus', '❌ Permission: ' + perm, 'err');
       return;
     }
-    var reg = await navigator.serviceWorker.ready;
-    await reg.showNotification('🔔 ทดสอบ Local', {
-      body: 'ถ้าเห็นข้อความนี้ notification ทำงานได้ปกติ',
-      tag: 'local-test',
-      requireInteraction: false,
-    });
-    status('localStatus', '✅ ส่ง local notification แล้ว ดูที่มุมจอ/notification bar', 'ok');
-    log('Local notification sent OK');
+
+    // ทดสอบ direct (ไม่ผ่าน SW)
+    try {
+      new Notification('🔔 Direct Test', { body: 'Direct notification - ไม่ผ่าน Service Worker' });
+      log('Direct notification sent');
+      status('localStatus', '✅ Direct notification ส่งแล้ว', 'ok');
+    } catch(e) {
+      log('Direct failed: ' + e.message + ' — ลอง SW...');
+      // fallback ผ่าน SW
+      var reg = await navigator.serviceWorker.ready;
+      await reg.showNotification('🔔 SW Test', {
+        body: 'Service Worker notification test',
+        tag: 'local-test',
+      });
+      status('localStatus', '✅ SW notification ส่งแล้ว', 'ok');
+      log('SW notification sent');
+    }
   } catch(e) {
     status('localStatus', '❌ Error: ' + e.message, 'err');
     log('Local Error: ' + e.message);
