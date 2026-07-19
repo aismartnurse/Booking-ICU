@@ -525,9 +525,7 @@ async function releaseBedIfAssigned(id) {
 }
 
 // ===== คำนวณ SOS score อัตโนมัติ =====
-// เกณฑ์อ้างอิง: ภานุวงษ์ แสนสำราญใจ, พารณ ขันติโชติ. ความถูกต้องของ SOS score
-// สำหรับการทำนายการเสียชีวิตในโรงพยาบาลของผู้ป่วยฉุกเฉิน. วารสาร มฉก.วิชาการ 2565;26(1):57-65.
-// จุดตัด ≥3 คะแนน = เสี่ยงสูง (Sensitivity 86.11%, Specificity 60.59%)
+// จุดตัด ≥4 คะแนน = เสี่ยงสูง
 function sosNum(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; }
 function sosPanelHTML(extra){
   function scoreBT(t){ if(t<=35)return 2; if(t<=36)return 1; if(t<38)return 0; if(t<=38.4)return 1; return 2; }
@@ -570,7 +568,7 @@ function sosPanelHTML(extra){
   var missing=items.filter(function(i){return i.score===null;}).map(function(i){return i.label;});
   var total=items.reduce(function(a,i){return a+(i.score||0);},0);
   var complete=missing.length===0;
-  var high = total>=3;
+  var high = total>=4;
   var band = high
     ? '<span style="color:#fff;background:#e74c3c;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">เสี่ยงสูง — ควรประเมิน/escalate ด่วน</span>'
     : '<span style="color:#fff;background:#27ae60;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">เสี่ยงต่ำ</span>';
@@ -597,7 +595,7 @@ function sosPanelHTML(extra){
     +'<div style="margin-top:2px;">'+rowsHtml+'</div>'
     +warn
     +'<div style="font-size:10.5px;color:#888;margin-top:4px;line-height:1.5;">'
-      +'เกณฑ์อ้างอิง: SOS score, วารสาร มฉก.วิชาการ 2565 (จุดตัด ≥3 = เสี่ยงสูง) · '
+      +'เกณฑ์อ้างอิง: SOS score สถาบันมะเร็งแห่งชาติ (จุดตัด ≥4 = เสี่ยงสูง) · '
       +'<b>เป็นเครื่องมือช่วยประเมินจากค่าที่กรอก ไม่ทดแทนวิจารณญาณของบุคลากร</b></div>'
     +'</div>';
 }
