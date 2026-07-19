@@ -530,35 +530,40 @@ async function releaseBedIfAssigned(id) {
 // จุดตัด ≥3 คะแนน = เสี่ยงสูง (Sensitivity 86.11%, Specificity 60.59%)
 function sosNum(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; }
 function sosPanelHTML(extra){
-  function scoreBT(t){ if(t<=35)return 2; if(t<=36)return 1; if(t<=38)return 0; if(t<=38.4)return 1; return 2; }
+  function scoreBT(t){ if(t<=35)return 2; if(t<=36)return 1; if(t<38)return 0; if(t<=38.4)return 1; return 2; }
   function scoreSBP(s){ if(s<=80)return 3; if(s<=90)return 2; if(s<=100)return 1; if(s<=180)return 0; if(s<=199)return 1; return 2; }
   function scoreHR(h){ if(h<=40)return 3; if(h<=50)return 1; if(h<=100)return 0; if(h<=120)return 1; if(h<=139)return 2; return 3; }
-  function scoreRR(r){ if(r<=8)return 3; if(r<=20)return 0; if(r<=25)return 1; if(r<=34)return 2; return 3; }
+  function scoreRR(r){ if(r<=10)return 1; if(r<=20)return 0; if(r<=25)return 1; return 2; }
   function scoreUrineHr(u){ if(u<=20)return 2; if(u<40)return 1; return 0; }  // u = ml/hr
   function scoreConscious(c){
     var x=(c||'').toLowerCase();
     if(!x) return null;
-    // แมปตามตัวเลือก 6 ระดับในฟอร์ม (อ้างอิงตาราง SOS รพ.พุทธชินราช)
-    if(x.includes('full')||x.includes('รู้สึกตัวดี')||x.includes('ตื่นดี')||x.includes('alert')) return 0;
-    if(x.includes('confus')||x.includes('สับสน')) return 1;
-    if(x.includes('drowsi')||x.includes('ง่วง')||x.includes('ซึม')&&!x.includes('ซึมมาก')) return 1;
-    if(x.includes('stupor')||x.includes('semicoma')||x.includes('ซึมมาก')) return 2;
-    if(x.includes('coma')&&!x.includes('semicoma')) return 3;
-    if(x.includes('ไม่รู้สึกตัว')||x.includes('unrespon')) return 3;
-    // สำรอง: AVPU เดิม
-    if(x.includes('pain')||x.includes('เจ็บ')) return 2;
-    if(x.includes('voice')||x.includes('verbal')||x.includes('เสียง')||x.includes('เรียก')) return 1;
-    return null;  // อ่านค่าไม่ได้
+    // 0: ตื่นดีพูดคุยรู้เรื่อง
+    if(x.includes('ตื่นดี')||x.includes('full')||x.includes('รู้สึกตัวดี')||x.includes('alert')||x.includes('พูดคุยรู้เรื่อง')) return 0;
+    // 3: ไม่รู้สึกแม้กระตุ้นแล้วก็ตาม
+    if(x.includes('ไม่รู้สึก')||x.includes('unrespon')||(x.includes('coma')&&!x.includes('semi'))) return 3;
+    // 2: ซึมมากต้องกระตุ้นจึงลืมตา
+    if(x.includes('ซึมมาก')||x.includes('stupor')||x.includes('semicoma')||x.includes('กระตุ้นจึง')||x.includes('pain')||x.includes('เจ็บ')) return 2;
+    // 1: ซึมแต่เรียกแล้วลืมตา / สับสน / กระสับกระส่าย / เพ้อ
+    if(x.includes('ซึม')||x.includes('drowsi')||x.includes('ง่วง')||x.includes('เรียกแล้ว')||x.includes('voice')||x.includes('verbal')||x.includes('เสียง')||x.includes('เรียก')) return 1;
+    if(x.includes('สับสน')||x.includes('confus')||x.includes('กระสับ')||x.includes('เพ้อ')||x.includes('agit')||x.includes('deli')) return 1;
+    return null;
   }
 
   var items=[];  // {label, shown, score|null}
-  var bt=sosNum(extra.temp), sbp=sosNum(extra.sbp), hr=sosNum(extra.hr), rr=sosNum(extra.rr), ur=sosNum(extra.urine);
+  var bt=sosNum(extra.temp), sbp=sosNum(extra.sbp), hr=sosNum(extra.hr), ur=sosNum(extra.urine);
+  var rrRaw=(extra.rr||'').toLowerCase();
+  var rrOnVent=rrRaw.includes('เครื่อง')||rrRaw.includes('vent')||rrRaw.includes('assist');
+  var rr=rrOnVent?null:sosNum(extra.rr);
   items.push({label:'Temp (°C)', shown:(extra.temp||'-'), score: bt==null?null:scoreBT(bt)});
   items.push({label:'SBP (mmHg)', shown:(extra.sbp||'-'), score: sbp==null?null:scoreSBP(sbp)});
   items.push({label:'HR (/min)', shown:(extra.hr||'-'), score: hr==null?null:scoreHR(hr)});
-  items.push({label:'RR (/min)', shown:(extra.rr||'-'), score: rr==null?null:scoreRR(rr)});
-  var upHr = ur==null?null:ur;   // ฟอร์มกรอกเป็น ml/hr โดยตรงแล้ว
-  items.push({label:'Urine', shown: ur==null?'-':(ur+' ml/hr'), score: upHr==null?null:scoreUrineHr(upHr)});
+  if(rrOnVent){
+    items.push({label:'RR', shown:'ใช้เครื่องช่วย', score:2});
+  } else {
+    items.push({label:'RR (/min)', shown:(extra.rr||'-'), score: rr==null?null:scoreRR(rr)});
+  }
+  items.push({label:'Urine (ml/hr)', shown: ur==null?'-':(ur+' ml/hr'), score: ur==null?null:scoreUrineHr(ur)});
   var cScore=scoreConscious(extra.conscious);
   items.push({label:'Conscious', shown:(extra.conscious||'-'), score:cScore});
 
