@@ -248,6 +248,7 @@ function playBell() {
 }
 
 function dismissAlert() {
+  allChanges = [];
   document.getElementById('alert-bar').style.display = 'none';
   bellPlaying = false;
 }
@@ -278,18 +279,22 @@ function checkChanges(submissions) {
   }
 }
 
+var allChanges = []; // สะสมรายการทั้งหมด
+
 function showAlert(changes) {
+  // เพิ่มรายการใหม่เข้าไปสะสม
+  allChanges = allChanges.concat(changes);
+
   var bar = document.getElementById('alert-bar');
   var items = document.getElementById('alert-items');
   bar.style.display = 'flex';
-  items.innerHTML = changes.map(function(c) {
+  items.innerHTML = allChanges.map(function(c) {
     return '• ' + c.name + ' (HN: ' + c.hn + ') → ' + c.to;
   }).join('<br>');
 
   if (soundUnlocked) {
     playBell();
   } else {
-    // ยังไม่ได้เปิดเสียง — แสดงข้อความแจ้งเตือนใน alert bar
     items.innerHTML += '<br><b style="color:#fff;">⚠️ กดปุ่ม "เปิดเสียง" เพื่อรับเสียงแจ้งเตือน</b>';
   }
 }
