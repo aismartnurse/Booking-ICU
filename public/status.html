@@ -109,6 +109,7 @@
       <button class="ward-btn" onclick="selectWard('Ward 7')">Ward 7</button>
       <button class="ward-btn" onclick="selectWard('Ward 8')">Ward 8</button>
     </div>
+    <div id="debug-log" style="margin-top:10px;font-size:11px;color:#888;max-height:80px;overflow-y:auto;display:none;"></div>
   </div>
 
   <div class="summary">
@@ -196,18 +197,32 @@ function selectWard(ward) {
   document.getElementById('requestTitle').textContent = ward ? 'คำขอของ ' + ward : 'คำขอทั้งหมด';
 
   var banner = document.getElementById('sound-banner');
+  var debugEl = document.getElementById('debug-log');
   if (ward) {
     banner.style.display = 'block';
+    debugEl.style.display = 'block';
     banner.innerHTML = soundUnlocked
       ? '<span style="font-size:12px;color:#1e8449;">🔔 เสียงเปิดอยู่</span>'
+        + ' <button onclick="testBell()" style="margin-left:8px;padding:3px 8px;background:#2980b9;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px;">ทดสอบเสียง</button>'
       : '<button onclick="unlockSound()" style="padding:4px 10px;background:#06c755;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">🔔 เปิดเสียงแจ้งเตือน</button>';
   } else {
     banner.style.display = 'none';
+    debugEl.style.display = 'none';
   }
   loadData();
 }
 
 // ===== Sound =====
+function dlog(msg) {
+  var el = document.getElementById('debug-log');
+  if (!el) return;
+  var t = new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML += t + ' — ' + msg + '<br>';
+  el.scrollTop = el.scrollHeight;
+}
+
+function testBell() { playBell(); dlog('ทดสอบเสียงกริ่ง'); }
+
 function unlockSound() {
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -273,7 +288,12 @@ function checkChanges(submissions) {
     previousStatuses[r.id] = curr;
   });
 
-  if (changed.length > 0) showAlert(changed);
+  if (changed.length > 0) {
+    dlog('🔔 สถานะเปลี่ยน ' + changed.length + ' รายการ');
+    showAlert(changed);
+  } else {
+    dlog('เช็คแล้ว ไม่มีการเปลี่ยนแปลง (ward subs: ' + wardSubs.length + ')');
+  }
 }
 
 function showAlert(changes) {
@@ -301,8 +321,12 @@ async function loadData() {
     var newStatuses = {};
     all.forEach(function(r) { newStatuses[r.id] = r.status || 'pending'; });
 
-    // เช็คการเปลี่ยนแปลง (ไม่เช็คครั้งแรก)
-    if (!isFirst) checkChanges(all);
+    if (!isFirst) {
+      dlog('poll: ' + all.length + ' total, ward=' + (currentWard||'all'));
+      checkChanges(all);
+    } else {
+      dlog('โหลดครั้งแรก: ' + all.length + ' รายการ');
+    }
 
     // อัปเดต previousStatuses
     previousStatuses = newStatuses;
