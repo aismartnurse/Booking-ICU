@@ -74,6 +74,12 @@
 </header>
 
 <main>
+  <!-- Alert bar -->
+  <div id="alert-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#e74c3c;color:#fff;padding:14px 20px;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+    <span style="font-size:15px;font-weight:700;">🔔 มีคำขอใหม่สำหรับ <span id="alertWardName"></span> รอดำเนินการ!</span>
+    <button onclick="ackAlert()" style="padding:8px 20px;background:#fff;color:#e74c3c;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">✅ รับทราบ</button>
+  </div>
+
   <!-- Push Notification Bar -->
   <div class="section" id="push-bar">
     <div id="push-container">กำลังโหลด...</div>
@@ -113,7 +119,14 @@
 </main>
 
 <script>
-var alertInterval = null;
+// รับ message จาก Service Worker → เล่นเสียงกริ่ง
+navigator.serviceWorker.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'PLAY_SOUND') {
+    playBell10();
+  }
+});
+
+var bellInterval = null;
 var audioCtx = null;
 var audioUnlocked = false;
 
@@ -129,36 +142,45 @@ function unlockAudio() {
   } catch(e){}
 }
 
-function beepWard() {
-  if(!audioUnlocked||!audioCtx) return;
-  if(audioCtx.state==='suspended') audioCtx.resume();
-  [[0,1400],[0.12,900],[0.24,1400],[0.36,900]].forEach(function(p){
-    var o=audioCtx.createOscillator(),g=audioCtx.createGain();
-    o.connect(g);g.connect(audioCtx.destination);
-    o.frequency.value=p[1];o.type='square';
-    g.gain.setValueAtTime(0.35,audioCtx.currentTime+p[0]);
-    g.gain.linearRampToValueAtTime(0,audioCtx.currentTime+p[0]+0.1);
-    o.start(audioCtx.currentTime+p[0]);
-    o.stop(audioCtx.currentTime+p[0]+0.12);
+function playBell(ctx) {
+  [[0,1760],[0.08,880],[0.16,1760],[0.24,880]].forEach(function(p){
+    var o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);
+    o.frequency.value=p[1];o.type='sine';
+    g.gain.setValueAtTime(0.5,ctx.currentTime+p[0]);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+p[0]+0.35);
+    o.start(ctx.currentTime+p[0]);
+    o.stop(ctx.currentTime+p[0]+0.4);
   });
 }
 
-function startAlert() {
-  if(alertInterval) return;
-  beepWard();
+function playBell10() {
+  if(bellInterval) return;
+  if(!audioCtx){
+    try{ audioCtx=new(window.AudioContext||window.webkitAudioContext)();audioUnlocked=true; }catch(e){return;}
+  }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  var bar=document.getElementById('alert-bar');
+  if(bar){
+    bar.style.display='flex';
+    var wn=document.getElementById('alertWardName');
+    if(wn) wn.textContent=currentWard||'';
+  }
+  playBell(audioCtx);
   var count=0;
-  alertInterval=setInterval(function(){
+  bellInterval=setInterval(function(){
     count++;
-    if(count>=10){clearInterval(alertInterval);alertInterval=null;return;}
-    beepWard();
+    if(count>=10){clearInterval(bellInterval);bellInterval=null;return;}
+    playBell(audioCtx);
   },1000);
 }
 
-function stopAlert(){
-  if(alertInterval){clearInterval(alertInterval);alertInterval=null;}
+function ackAlert() {
+  if(bellInterval){clearInterval(bellInterval);bellInterval=null;}
+  var bar=document.getElementById('alert-bar');
+  if(bar) bar.style.display='none';
 }
 
-// ปุ่ม unlock เสียง
 document.addEventListener('click',function(){unlockAudio();},{once:true});
 var currentWard = new URLSearchParams(window.location.search).get('ward') || '';
 var WARDS = ['Ward 5','Ward 6','Ward 7','Ward 8'];
@@ -292,14 +314,6 @@ async function loadData(){
         :'<small>'+bedStatusLabel[b.status]+'</small>';
       return '<div class="bed-card '+b.status+'">'+b.label+info+'</div>';
     }).join('');
-
-    // เสียงแจ้งเตือนถ้ามีคำขอของ ward รอดำเนินการ
-    var wardPending = pending.filter(r=>r.status==='pending');
-    if(wardPending.length>0 && currentWard){
-      startAlert();
-    } else {
-      stopAlert();
-    }
 
     // table
     document.getElementById('pendingBody').innerHTML=pending.length
