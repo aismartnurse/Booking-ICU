@@ -277,6 +277,21 @@ async function loadAll() {
     var beds = await fetch('/api/beds').then(function(r){return r.json();});
     var subs = await fetch('/api/form-submissions').then(function(r){return r.json();});
     var users = await fetch('/api/admin/users').then(function(r){return r.json();});
+
+    // Crisis ครบ 24h → auto-complete
+    var now = Date.now();
+    for (var i = 0; i < subs.length; i++) {
+      var s = subs[i];
+      if (s.form_type === 'crisis' && s.status !== 'completed') {
+        if (now - new Date(s.submitted_at).getTime() >= 24 * 3600 * 1000) {
+          await fetch('/api/form-submissions/'+s.id+'/status', {
+            method:'PUT', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({status:'completed'})
+          });
+          s.status = 'completed'; // อัปเดต local ด้วย
+        }
+      }
+    }
     allBeds = beds;
     allSubs = subs;
     var hasPending = subs.some(function(r) { return r.status === 'pending'; });
