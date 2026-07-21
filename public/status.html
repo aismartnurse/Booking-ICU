@@ -67,6 +67,10 @@
   .badge.unplan{background:#fdecea;color:#c0392b;}
   .empty{text-align:center;color:#aaa;padding:20px;}
   .refresh-note{text-align:center;font-size:11px;color:#aaa;margin-top:12px;}
+  #crisis-warn-bar{display:none;background:#e67e22;color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+  #crisis-warn-bar .cw-title{font-size:15px;font-weight:700;margin-bottom:6px;}
+  #crisis-warn-bar .cw-items{font-size:13px;line-height:1.8;}
+  #crisis-warn-bar button{margin-top:10px;padding:6px 16px;background:#fff;color:#e67e22;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;}
 
   @media(max-width:600px){
     .summary{grid-template-columns:repeat(2,1fr);}
@@ -108,6 +112,13 @@
 <main>
   <!-- Sound unlock (แสดงเฉพาะเมื่อเลือก ward) -->
   <div id="sound-banner"></div>
+
+  <!-- แถบเตือน Crisis ใกล้ครบ 24 ชม. -->
+  <div id="crisis-warn-bar">
+    <div class="cw-title">⏰ แจ้งเตือน: คำขอ Crisis ใกล้ครบ 24 ชั่วโมง</div>
+    <div class="cw-items" id="crisis-warn-items"></div>
+    <button onclick="dismissCrisisWarn()">✅ รับทราบ</button>
+  </div>
 
   <!-- Ward selector -->
   <div id="ward-selector">
@@ -289,7 +300,46 @@ function checkChanges(submissions) {
   }
 }
 
-var allChanges = []; // สะสมรายการทั้งหมด
+var allChanges = [];
+var crisisWarnSnoozed = false;
+
+function playCrisisWarn() {
+  if (!soundUnlocked || !audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  [0, 0.35, 0.7].forEach(function(t) {
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.frequency.value = 1100; o.type = 'square';
+    g.gain.setValueAtTime(0.4, audioCtx.currentTime + t);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + t + 0.28);
+    o.start(audioCtx.currentTime + t);
+    o.stop(audioCtx.currentTime + t + 0.3);
+  });
+}
+
+function dismissCrisisWarn() {
+  crisisWarnSnoozed = true;
+  document.getElementById('crisis-warn-bar').style.display = 'none';
+  setTimeout(function(){ crisisWarnSnoozed = false; }, 30 * 60 * 1000); // เตือนใหม่ใน 30 นาที
+}
+
+function checkCrisisExpiring(submissions) {
+  if (!currentWard || crisisWarnSnoozed) return;
+  var now = Date.now();
+  var expiring = submissions.filter(function(r) {
+    if (r.form_type !== 'crisis' || r.ward !== currentWard) return false;
+    var age = now - new Date(r.submitted_at).getTime();
+    return age >= 23 * 3600 * 1000 && age < 24 * 3600 * 1000;
+  });
+  var bar = document.getElementById('crisis-warn-bar');
+  if (!expiring.length) { bar.style.display = 'none'; return; }
+  document.getElementById('crisis-warn-items').innerHTML = expiring.map(function(r) {
+    var minLeft = Math.ceil((24 * 3600 * 1000 - (now - new Date(r.submitted_at).getTime())) / 60000);
+    return '• ' + (r.patient_name||'-') + ' (HN: ' + (r.patient_hn||'-') + ') — เหลืออีก ≈ <b>' + minLeft + ' นาที</b>';
+  }).join('<br>');
+  bar.style.display = 'block';
+  playCrisisWarn();
+}
 
 function showAlert(changes) {
   // เพิ่มรายการใหม่เข้าไปสะสม
@@ -321,14 +371,22 @@ async function loadData() {
     all.forEach(function(r) { newStatuses[r.id] = r.status || 'pending'; });
 
     if (!isFirst) checkChanges(all);
+    checkCrisisExpiring(all);
 
     // อัปเดต previousStatuses
     previousStatuses = newStatuses;
 
+    // ซ่อน crisis ที่ครบ 24 ชม. แล้ว
+    var now = Date.now();
+    var visible = all.filter(function(r) {
+      if (r.form_type !== 'crisis') return true;
+      return now - new Date(r.submitted_at).getTime() < 24 * 3600 * 1000;
+    });
+
     // filter ward
     var pending = currentWard
-      ? all.filter(function(r){ return r.ward === currentWard; })
-      : all;
+      ? visible.filter(function(r){ return r.ward === currentWard; })
+      : visible;
 
     // summary beds
     var c={available:0,occupied:0,cleaning:0,closed:0};
