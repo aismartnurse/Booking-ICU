@@ -325,6 +325,12 @@ function renderSubs() {
   var dateFilter = document.getElementById('dateFilter').value;
   var rows = allSubs;
 
+  // Crisis โชว์สูงสุด 24 ชม. เท่านั้น (ซ่อนหลังครบ 24h เสมอ)
+  rows = rows.filter(function(r) {
+    if (r.form_type !== 'crisis') return true;
+    return Date.now() - new Date(r.submitted_at).getTime() < 24 * 3600 * 1000;
+  });
+
   if (!showAll) {
     rows = rows.filter(function(r) { return (r.admission_status || 'pending') === 'pending'; });
   }
@@ -525,7 +531,7 @@ async function releaseBedIfAssigned(id) {
 }
 
 // ===== คำนวณ SOS score อัตโนมัติ =====
-// จุดตัด ≥4 คะแนน = เสี่ยงสูง
+// เกณฑ์อ้างอิง: SOS score สถาบันมะเร็งแห่งชาติ — จุดตัด ≥4 = เสี่ยงสูง
 function sosNum(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; }
 function sosPanelHTML(extra){
   function scoreBT(t){ if(t<=35)return 2; if(t<=36)return 1; if(t<38)return 0; if(t<=38.4)return 1; return 2; }
