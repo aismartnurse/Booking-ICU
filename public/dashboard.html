@@ -278,7 +278,7 @@ async function loadAll() {
     var subs = await fetch('/api/form-submissions').then(function(r){return r.json();});
     var users = await fetch('/api/admin/users').then(function(r){return r.json();});
 
-    // Crisis ครบ 24h → auto-complete
+    // Crisis ครบ 24h → auto-complete + ไม่เข้า ICU (ถ้ายังไม่ได้เข้า)
     var now = Date.now();
     for (var i = 0; i < subs.length; i++) {
       var s = subs[i];
@@ -288,7 +288,15 @@ async function loadAll() {
             method:'PUT', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({status:'completed'})
           });
-          s.status = 'completed'; // อัปเดต local ด้วย
+          s.status = 'completed';
+          // ถ้ายังรอติดตาม (ยังไม่ได้เข้า ICU) → เปลี่ยนเป็น "ไม่เข้า ICU"
+          if ((s.admission_status || 'pending') === 'pending') {
+            await fetch('/api/form-submissions/'+s.id+'/admission', {
+              method:'PUT', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({admissionStatus:'return_ward', assignedBed:null})
+            });
+            s.admission_status = 'return_ward';
+          }
         }
       }
     }
