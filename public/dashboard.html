@@ -595,7 +595,7 @@ function sosPanelHTML(extra){
   } else {
     items.push({label:'RR (/min)', shown:(extra.rr||'-'), score: rr==null?null:scoreRR(rr)});
   }
-  items.push({label:'Urine (ml/hr)', shown: ur==null?'-':(ur+' ml/hr'), score: ur==null?null:scoreUrineHr(ur)});
+  items.push({label:'Urine (ml/8hr)', shown: ur==null?'-':(ur+' ml/8hr'), score: ur==null?null:scoreUrineHr(ur)});
   var cScore=scoreConscious(extra.conscious);
   items.push({label:'Conscious', shown:(extra.conscious||'-'), score:cScore});
 
