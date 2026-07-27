@@ -282,20 +282,27 @@ async function loadAll() {
     var now = Date.now();
     for (var i = 0; i < subs.length; i++) {
       var s = subs[i];
-      if (s.form_type === 'crisis' && s.status !== 'completed') {
-        if (now - new Date(s.submitted_at).getTime() >= 24 * 3600 * 1000) {
-          await fetch('/api/form-submissions/'+s.id+'/status', {
-            method:'PUT', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({status:'completed'})
-          });
-          s.status = 'completed';
+      var ft = (s.form_type || '').toLowerCase();
+      var ts = s.submitted_at || s.created_at;
+      if (ft === 'crisis' && s.status !== 'completed' && ts) {
+        var age = now - new Date(ts).getTime();
+        if (age >= 24 * 3600 * 1000) {
+          try {
+            await fetch('/api/form-submissions/'+s.id+'/status', {
+              method:'PUT', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({status:'completed'})
+            });
+            s.status = 'completed';
+          } catch(e) { console.log('[auto-expire] status PUT failed:', e); }
           // ถ้ายังรอติดตาม (ยังไม่ได้เข้า ICU) → เปลี่ยนเป็น "ไม่เข้า ICU"
           if ((s.admission_status || 'pending') === 'pending') {
-            await fetch('/api/form-submissions/'+s.id+'/admission', {
-              method:'PUT', headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({admissionStatus:'return_ward', assignedBed:null})
-            });
-            s.admission_status = 'return_ward';
+            try {
+              await fetch('/api/form-submissions/'+s.id+'/admission', {
+                method:'PUT', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({admissionStatus:'return_ward', assignedBed:null})
+              });
+              s.admission_status = 'return_ward';
+            } catch(e) { console.log('[auto-expire] admission PUT failed:', e); }
           }
         }
       }
@@ -350,8 +357,10 @@ function renderSubs() {
 
   // Crisis โชว์สูงสุด 24 ชม.
   rows = rows.filter(function(r) {
-    if (r.form_type !== 'crisis') return true;
-    return Date.now() - new Date(r.submitted_at).getTime() < 24 * 3600 * 1000;
+    if ((r.form_type || '').toLowerCase() !== 'crisis') return true;
+    var ts = r.submitted_at || r.created_at;
+    if (!ts) return false;
+    return Date.now() - new Date(ts).getTime() < 24 * 3600 * 1000;
   });
 
   if (!showAll) {
@@ -652,7 +661,7 @@ async function showDetail(id) {
     ['RR (bpm.)', extra.rr||''],
     ['Temp (°C)', extra.temp||''],
     ['Conscious', extra.conscious||''],
-    ['ปริมาณปัสสาวะ (ml/hr)', extra.urine||''],
+    ['ปริมาณปัสสาวะ (ml/8hr)', extra.urine||''],
     ['เรื่องที่ต้องการจอง', extra.reason||''],
     ['Source of sepsis', extra.sepsis_source||''],
     ['Resuscitation', extra.resuscitation||''],
