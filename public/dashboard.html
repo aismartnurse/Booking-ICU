@@ -82,10 +82,6 @@
       <div class="grid" id="bedsGrid"></div>
     </section>
     <section>
-      <h2>สถิติการเข้า ICU</h2>
-      <div id="statsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:8px;"></div>
-    </section>
-    <section>
       <h2>คำขอจองเตียง ICU</h2>
       <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
         <input id="searchInput" type="text" placeholder="🔍 ค้นหาชื่อ, HN, หอผู้ป่วย..." style="padding:7px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;min-width:220px;" oninput="renderSubs()" />
@@ -320,7 +316,6 @@ async function loadAll() {
     if (hasPending) { playAlert(); } else { stopAlert(); }
     lastSubCount = subs.length;
     renderBeds(beds);
-    renderStats();
     renderSubs();
     renderUsers(users);
   } catch(e) { console.log('error:', e); }
@@ -328,25 +323,24 @@ async function loadAll() {
 
 function renderStats() {
   var s = allSubs;
-  var inICU      = s.filter(function(r){ return r.admission_status==='confirmed'; }).length;
-  var admitted   = s.filter(function(r){ return r.admission_status==='confirmed'||r.admission_status==='discharged'; }).length;
-  var notAdmit   = s.filter(function(r){ return r.admission_status==='return_ward'; }).length;
-  var discharged = s.filter(function(r){ return r.admission_status==='discharged'; }).length;
-  var totalReq   = s.length;
+  // เข้า ICU จริง (สะสม) = confirmed (อยู่ในICUตอนนี้) + discharged (เคยอยู่แล้วย้ายออก)
+  var admittedTotal = s.filter(function(r){
+    return r.admission_status === 'confirmed' || r.admission_status === 'discharged';
+  }).length;
+  var inICUNow  = s.filter(function(r){ return r.admission_status === 'confirmed'; }).length;
+  var totalReq  = s.length;
+  var notAdmit  = s.filter(function(r){ return r.admission_status === 'return_ward'; }).length;
 
-  var cards = [
-    { num: totalReq,   label: 'คำขอทั้งหมด',       color: '#185fa5' },
-    { num: inICU,      label: 'กำลังอยู่ใน ICU',    color: '#27ae60' },
-    { num: admitted,   label: 'เข้า ICU สะสม',      color: '#0a5c36' },
-    { num: discharged, label: 'ย้ายกลับวอร์ดแล้ว',  color: '#8e44ad' },
-    { num: notAdmit,   label: 'ไม่เข้า ICU',         color: '#c0392b' },
-  ];
-  document.getElementById('statsGrid').innerHTML = cards.map(function(c){
-    return '<div class="stat-card">'
-      +'<p class="stat-num" style="color:'+c.color+'">'+c.num+'</p>'
-      +'<p class="stat-label">'+c.label+'</p>'
-      +'</div>';
-  }).join('');
+  document.getElementById('statsGrid').innerHTML =
+    // KPI หลัก — ใหญ่กว่า
+    '<div class="stat-card" style="border:2px solid #0a5c36;grid-column:span 2;">'
+      +'<p class="stat-num" style="color:#0a5c36;font-size:38px;">'+admittedTotal+'</p>'
+      +'<p class="stat-label" style="font-size:13px;font-weight:600;color:#0a5c36;">เข้า ICU จริง (สะสม)</p>'
+      +'<p class="stat-label" style="margin-top:2px;">กำลังอยู่ใน ICU ขณะนี้: <b>'+inICUNow+'</b></p>'
+    +'</div>'
+    // รอง
+    +'<div class="stat-card"><p class="stat-num" style="color:#185fa5;">'+totalReq+'</p><p class="stat-label">คำขอทั้งหมด</p></div>'
+    +'<div class="stat-card"><p class="stat-num" style="color:#c0392b;">'+notAdmit+'</p><p class="stat-label">ไม่เข้า ICU</p></div>';
 }
 
 function renderBeds(beds) {
