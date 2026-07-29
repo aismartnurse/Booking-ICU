@@ -227,7 +227,8 @@ function count(arr, key, val) { return arr.filter(r=>r[key]===val).length; }
 
 function renderSummary(d) {
   // เข้า ICU จริง = confirmed + discharged
-  var admittedTotal = countAdmitted(d);
+  var admitted      = d.filter(function(r){ return r.admission_status==='confirmed'||r.admission_status==='discharged'; });
+  var admittedTotal = admitted.length;
   var inICUNow      = count(d, 'admission_status', 'confirmed');
   var notEnter      = count(d, 'admission_status', 'return_ward');
   var completed     = count(d, 'status', 'completed');
@@ -241,7 +242,7 @@ function renderSummary(d) {
     {num: admittedTotal,  lbl: '✅ เข้า ICU', sub: 'อยู่ใน ICU ตอนนี้: ' + inICUNow, cls: 'darkgreen', highlight: true},
     {num: notEnter,       lbl: '🔙 ไม่เข้า ICU',     sub: '',                           cls: 'orange'},
     {num: completed,      lbl: '🎉 เสร็จสิ้น',        sub: '',                           cls: 'teal'},
-    {num: count(d,'icu_type','unplan'), lbl: '🚨 Unplan', sub: '', cls: 'red'},
+    {num: admitted.filter(r=>r.icu_type==='unplan').length, lbl: '🚨 Unplan', sub: 'เฉพาะที่เข้า ICU', cls: 'red'},
   ].map(c=>`<div class="card ${c.cls}${c.highlight?' highlight':''}">
     <div class="num">${c.num}</div>
     <div class="lbl">${c.lbl}</div>
@@ -291,9 +292,11 @@ function renderCharts(d) {
     ['#3498db','#e74c3c','#f39c12','#27ae60','#9b59b6','#1abc9c','#e67e22','#34495e'],
     { plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{stepSize:1} } } });
 
+  // Plan/Unplan นับเฉพาะผู้ที่เข้า ICU จริงแล้ว
+  var dAdmitted = d.filter(function(r){ return r.admission_status==='confirmed'||r.admission_status==='discharged'; });
   makeChart('chartIcuType','doughnut',
     ['📋 Plan','🚨 Unplan'],
-    [count(d,'icu_type','plan'),count(d,'icu_type','unplan')],
+    [count(dAdmitted,'icu_type','plan'),count(dAdmitted,'icu_type','unplan')],
     ['#3498db','#e74c3c']);
 }
 
