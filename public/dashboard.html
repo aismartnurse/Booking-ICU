@@ -355,16 +355,17 @@ function renderSubs() {
   var dateFilter = document.getElementById('dateFilter').value;
   var rows = allSubs;
 
-  // Crisis โชว์สูงสุด 24 ชม.
-  rows = rows.filter(function(r) {
-    if ((r.form_type || '').toLowerCase() !== 'crisis') return true;
-    var ts = r.submitted_at || r.created_at;
-    if (!ts) return false;
-    return Date.now() - new Date(ts).getTime() < 24 * 3600 * 1000;
-  });
-
   if (!showAll) {
-    rows = rows.filter(function(r) { return (r.admission_status || 'pending') === 'pending'; });
+    // หน้าหลัก: ซ่อน crisis ที่ครบ 24h + ซ่อน non-pending
+    rows = rows.filter(function(r) {
+      var ft = (r.form_type || '').toLowerCase();
+      if (ft === 'crisis') {
+        var ts = r.submitted_at || r.created_at;
+        if (!ts) return false;
+        return Date.now() - new Date(ts).getTime() < 24 * 3600 * 1000;
+      }
+      return (r.admission_status || 'pending') === 'pending';
+    });
   }
   if (search) {
     rows = rows.filter(function(r) {
