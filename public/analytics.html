@@ -116,7 +116,7 @@
       <div class="chart-container"><canvas id="chartStatus"></canvas></div>
     </div>
     <div class="chart-box">
-      <h3>🏥 สถานะเข้า ICU (สะสม)</h3>
+      <h3>🏥 สถานะเข้า ICU</h3>
       <div class="chart-container"><canvas id="chartAdmission"></canvas></div>
     </div>
     <div class="chart-box">
@@ -132,7 +132,7 @@
   <div class="table-box">
     <h3>📈 สถิติแยกตามหอผู้ป่วย</h3>
     <table>
-      <thead><tr><th>หอผู้ป่วย</th><th>คำขอทั้งหมด</th><th>OR</th><th>Crisis</th><th>เข้า ICU (สะสม)</th><th>ไม่เข้า ICU</th><th>เสร็จสิ้น</th></tr></thead>
+      <thead><tr><th>หอผู้ป่วย</th><th>คำขอทั้งหมด</th><th>OR</th><th>Crisis</th><th>เข้า ICU</th><th>ไม่เข้า ICU</th><th>เสร็จสิ้น</th></tr></thead>
       <tbody id="wardTable"></tbody>
     </table>
   </div>
@@ -179,7 +179,7 @@
 var allData = [];
 var charts = {};
 
-// นับเข้า ICU จริง (สะสม) = confirmed (อยู่ใน ICU ตอนนี้) + discharged (ย้ายออกแล้ว)
+// นับเข้า ICU จริง = confirmed (อยู่ใน ICU ตอนนี้) + discharged (ย้ายออกแล้ว)
 function countAdmitted(arr) {
   return arr.filter(function(r) {
     return r.admission_status === 'confirmed' || r.admission_status === 'discharged';
@@ -226,7 +226,7 @@ function applyFilter() {
 function count(arr, key, val) { return arr.filter(r=>r[key]===val).length; }
 
 function renderSummary(d) {
-  // เข้า ICU จริง (สะสม) = confirmed + discharged
+  // เข้า ICU จริง = confirmed + discharged
   var admittedTotal = countAdmitted(d);
   var inICUNow      = count(d, 'admission_status', 'confirmed');
   var notEnter      = count(d, 'admission_status', 'return_ward');
@@ -238,7 +238,7 @@ function renderSummary(d) {
     {num: count(d,'form_type','crisis'),lbl: 'ICU Crisis',  sub: '', cls: 'red'},
     {num: count(d,'urgency','emergency'), lbl: '🔴 เร่งด่วนมาก', sub: '', cls: 'red'},
     // KPI หลัก
-    {num: admittedTotal,  lbl: '✅ เข้า ICU (สะสม)', sub: 'อยู่ใน ICU ตอนนี้: ' + inICUNow, cls: 'darkgreen', highlight: true},
+    {num: admittedTotal,  lbl: '✅ เข้า ICU', sub: 'อยู่ใน ICU ตอนนี้: ' + inICUNow, cls: 'darkgreen', highlight: true},
     {num: notEnter,       lbl: '🔙 ไม่เข้า ICU',     sub: '',                           cls: 'orange'},
     {num: completed,      lbl: '🎉 เสร็จสิ้น',        sub: '',                           cls: 'teal'},
     {num: count(d,'icu_type','unplan'), lbl: '🚨 Unplan', sub: '', cls: 'red'},
@@ -282,7 +282,7 @@ function renderCharts(d) {
   var notEnter      = count(d,'admission_status','return_ward');
   var pending       = count(d,'admission_status','pending');
   makeChart('chartAdmission','doughnut',
-    ['รอติดตาม','✅ เข้า ICU (สะสม)','🔙 ไม่เข้า'],
+    ['รอติดตาม','✅ เข้า ICU','🔙 ไม่เข้า'],
     [pending, admittedTotal, notEnter],
     ['#95a5a6','#0a5c36','#e74c3c']);
 
@@ -349,7 +349,7 @@ function renderTables(d) {
     // เข้า ICU = confirmed + discharged
     var admittedN = countAdmitted(sub);
     var rows = [
-      {label:'✅ เข้า ICU (สะสม)', n: admittedN, color:'#0a5c36'},
+      {label:'✅ เข้า ICU', n: admittedN, color:'#0a5c36'},
       {label:'❌ ไม่เข้า ICU',      n: count(sub,'admission_status','return_ward'), color:'#c0392b'},
       {label:'⏳ รอติดตาม',         n: sub.filter(r=>(r.admission_status||'pending')==='pending').length, color:'#b9770e'},
     ];
