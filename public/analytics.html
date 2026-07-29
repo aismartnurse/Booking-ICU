@@ -14,38 +14,35 @@
   .hdr-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
   main { max-width: 1300px; margin: 0 auto; padding: 28px 24px; }
 
-  /* Summary Cards */
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-bottom: 28px; }
   .card { background: #fff; border-radius: 14px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .card.highlight { border: 2px solid #0a5c36; }
   .card .num { font-size: 36px; font-weight: 800; margin-bottom: 6px; }
   .card .lbl { font-size: 12px; color: #666; }
+  .card .sub { font-size: 11px; color: #999; margin-top: 4px; }
   .card.green .num { color: #06c755; }
+  .card.darkgreen .num { color: #0a5c36; }
   .card.red .num { color: #e74c3c; }
   .card.orange .num { color: #f39c12; }
   .card.blue .num { color: #2980b9; }
   .card.purple .num { color: #8e44ad; }
   .card.teal .num { color: #16a085; }
 
-  /* Charts Grid */
   .charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; margin-bottom: 28px; }
   .chart-box { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
   .chart-box h3 { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
   .chart-container { position: relative; height: 220px; }
 
-  /* Table */
   .table-box { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; }
   .table-box h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { background: #f8f9fa; padding: 10px 12px; text-align: left; color: #555; font-weight: 600; }
   td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; }
   tr:last-child td { border-bottom: none; }
-  .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
 
-  /* Filter */
   .filters { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
   .filters select, .filters input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; }
   .filters label { font-size: 13px; color: #555; }
-  .print-btn { margin-left: auto; background: #2980b9; color: #fff; border: none; padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; }
 
   #loginBox { max-width: 320px; margin: 80px auto; background: #fff; padding: 28px; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
   #loginBox h2 { margin-bottom: 16px; font-size: 18px; }
@@ -119,7 +116,7 @@
       <div class="chart-container"><canvas id="chartStatus"></canvas></div>
     </div>
     <div class="chart-box">
-      <h3>🏥 สถานะเข้า ICU</h3>
+      <h3>🏥 สถานะเข้า ICU (สะสม)</h3>
       <div class="chart-container"><canvas id="chartAdmission"></canvas></div>
     </div>
     <div class="chart-box">
@@ -135,7 +132,7 @@
   <div class="table-box">
     <h3>📈 สถิติแยกตามหอผู้ป่วย</h3>
     <table>
-      <thead><tr><th>หอผู้ป่วย</th><th>คำขอทั้งหมด</th><th>OR</th><th>Crisis</th><th>เข้า ICU</th><th>ไม่เข้า ICU</th><th>เสร็จสิ้น</th></tr></thead>
+      <thead><tr><th>หอผู้ป่วย</th><th>คำขอทั้งหมด</th><th>OR</th><th>Crisis</th><th>เข้า ICU (สะสม)</th><th>ไม่เข้า ICU</th><th>เสร็จสิ้น</th></tr></thead>
       <tbody id="wardTable"></tbody>
     </table>
   </div>
@@ -182,6 +179,13 @@
 var allData = [];
 var charts = {};
 
+// นับเข้า ICU จริง (สะสม) = confirmed (อยู่ใน ICU ตอนนี้) + discharged (ย้ายออกแล้ว)
+function countAdmitted(arr) {
+  return arr.filter(function(r) {
+    return r.admission_status === 'confirmed' || r.admission_status === 'discharged';
+  }).length;
+}
+
 async function doLogin() {
   var res = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:document.getElementById('un').value, password:document.getElementById('pw').value}) });
   if (res.ok) { document.getElementById('loginBox').style.display='none'; document.getElementById('app').style.display='block'; loadData(); }
@@ -191,12 +195,9 @@ async function doLogin() {
 async function loadData() {
   var data = await fetch('/api/form-submissions').then(r=>r.json());
   allData = data;
-
-  // populate ward filter
   var wards = [...new Set(data.map(r=>r.ward).filter(Boolean))].sort();
   var sel = document.getElementById('wardFilter');
   sel.innerHTML = '<option value="all">ทั้งหมด</option>' + wards.map(w=>`<option value="${w}">${w}</option>`).join('');
-
   applyFilter();
 }
 
@@ -204,7 +205,6 @@ function applyFilter() {
   var range = document.getElementById('rangeFilter').value;
   var type  = document.getElementById('typeFilter').value;
   var ward  = document.getElementById('wardFilter').value;
-
   var now = new Date();
   var filtered = allData.filter(function(r) {
     if (type !== 'all' && r.form_type !== type) return false;
@@ -216,37 +216,37 @@ function applyFilter() {
     }
     return true;
   });
-
   document.getElementById('subtitle').textContent =
     'แสดงข้อมูล ' + filtered.length + ' รายการ จากทั้งหมด ' + allData.length + ' รายการ';
-
   renderSummary(filtered);
   renderCharts(filtered);
   renderTables(filtered);
 }
 
 function count(arr, key, val) { return arr.filter(r=>r[key]===val).length; }
-function countExtra(arr, key, val) {
-  return arr.filter(r=>{
-    var ex = typeof r.extra_data==='string'?JSON.parse(r.extra_data):(r.extra_data||{});
-    return ex[key]===val;
-  }).length;
-}
 
 function renderSummary(d) {
-  var entered = d.filter(r=>r.admission_status==='confirmed').length;
-  var notEnter = d.filter(r=>r.admission_status==='return_ward').length;
-  var completed = d.filter(r=>r.status==='completed').length;
+  // เข้า ICU จริง (สะสม) = confirmed + discharged
+  var admittedTotal = countAdmitted(d);
+  var inICUNow      = count(d, 'admission_status', 'confirmed');
+  var notEnter      = count(d, 'admission_status', 'return_ward');
+  var completed     = count(d, 'status', 'completed');
+
   document.getElementById('summaryCards').innerHTML = [
-    {num: d.length, lbl: 'คำขอทั้งหมด', cls: 'blue'},
-    {num: count(d,'form_type','or'), lbl: 'ICU for OR', cls: 'purple'},
-    {num: count(d,'form_type','crisis'), lbl: 'ICU Crisis', cls: 'red'},
-    {num: count(d,'urgency','emergency'), lbl: '🔴 เร่งด่วนมาก', cls: 'red'},
-    {num: entered, lbl: '✅ เข้า ICU', cls: 'green'},
-    {num: notEnter, lbl: '🔙 ไม่เข้า ICU', cls: 'orange'},
-    {num: completed, lbl: '🎉 เสร็จสิ้น', cls: 'teal'},
-    {num: count(d,'icu_type','unplan'), lbl: '🚨 Unplan', cls: 'red'},
-  ].map(c=>`<div class="card ${c.cls}"><div class="num">${c.num}</div><div class="lbl">${c.lbl}</div></div>`).join('');
+    {num: d.length,       lbl: 'คำขอทั้งหมด',      sub: '',                           cls: 'blue'},
+    {num: count(d,'form_type','or'),    lbl: 'ICU for OR',  sub: '', cls: 'purple'},
+    {num: count(d,'form_type','crisis'),lbl: 'ICU Crisis',  sub: '', cls: 'red'},
+    {num: count(d,'urgency','emergency'), lbl: '🔴 เร่งด่วนมาก', sub: '', cls: 'red'},
+    // KPI หลัก
+    {num: admittedTotal,  lbl: '✅ เข้า ICU (สะสม)', sub: 'อยู่ใน ICU ตอนนี้: ' + inICUNow, cls: 'darkgreen', highlight: true},
+    {num: notEnter,       lbl: '🔙 ไม่เข้า ICU',     sub: '',                           cls: 'orange'},
+    {num: completed,      lbl: '🎉 เสร็จสิ้น',        sub: '',                           cls: 'teal'},
+    {num: count(d,'icu_type','unplan'), lbl: '🚨 Unplan', sub: '', cls: 'red'},
+  ].map(c=>`<div class="card ${c.cls}${c.highlight?' highlight':''}">
+    <div class="num">${c.num}</div>
+    <div class="lbl">${c.lbl}</div>
+    ${c.sub ? `<div class="sub">${c.sub}</div>` : ''}
+  </div>`).join('');
 }
 
 function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
@@ -277,10 +277,14 @@ function renderCharts(d) {
     [count(d,'status','pending'),count(d,'status','acknowledged'),count(d,'status','waiting_bed'),count(d,'status','completed')],
     ['#f39c12','#27ae60','#f1c40f','#2980b9']);
 
+  // chart admission: นับ confirmed+discharged รวมเป็น "เข้า ICU สะสม"
+  var admittedTotal = countAdmitted(d);
+  var notEnter      = count(d,'admission_status','return_ward');
+  var pending       = count(d,'admission_status','pending');
   makeChart('chartAdmission','doughnut',
-    ['รอติดตาม','✅ เข้า ICU','🔙 ไม่เข้า'],
-    [count(d,'admission_status','pending'),count(d,'admission_status','confirmed'),count(d,'admission_status','return_ward')],
-    ['#95a5a6','#27ae60','#e74c3c']);
+    ['รอติดตาม','✅ เข้า ICU (สะสม)','🔙 ไม่เข้า'],
+    [pending, admittedTotal, notEnter],
+    ['#95a5a6','#0a5c36','#e74c3c']);
 
   var wards = [...new Set(d.map(r=>r.ward).filter(Boolean))].sort();
   makeChart('chartWard','bar', wards, wards.map(w=>d.filter(r=>r.ward===w).length),
@@ -297,18 +301,19 @@ function renderTables(d) {
   var wards = [...new Set(d.map(r=>r.ward).filter(Boolean))].sort();
   document.getElementById('wardTable').innerHTML = wards.map(w=>{
     var wd = d.filter(r=>r.ward===w);
+    // เข้า ICU สะสม = confirmed + discharged
+    var admWd = countAdmitted(wd);
     return `<tr>
       <td><b>${w}</b></td>
       <td>${wd.length}</td>
       <td>${count(wd,'form_type','or')}</td>
       <td>${count(wd,'form_type','crisis')}</td>
-      <td>${count(wd,'admission_status','confirmed')}</td>
+      <td style="color:#0a5c36;font-weight:600;">${admWd}</td>
       <td>${count(wd,'admission_status','return_ward')}</td>
       <td>${count(wd,'status','completed')}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="7" style="text-align:center;color:#999;">ไม่มีข้อมูล</td></tr>';
 
-  // เรื่องที่ต้องการจอง (Crisis)
   var reasonCount = {};
   d.filter(r=>r.form_type==='crisis').forEach(r=>{
     var ex = typeof r.extra_data==='string'?JSON.parse(r.extra_data):(r.extra_data||{});
@@ -319,7 +324,6 @@ function renderTables(d) {
     return `<tr><td>${i+1}</td><td><b>${reason}</b></td><td>${cnt}</td></tr>`;
   }).join('') || '<tr><td colspan="3" style="text-align:center;color:#999;">ไม่มีข้อมูล</td></tr>';
 
-  // แพทย์ผู้ผ่าตัด (OR)
   var doctorCount = {};
   var doctorMap = {};
   d.filter(r=>r.form_type==='or').forEach(r=>{
@@ -328,7 +332,8 @@ function renderTables(d) {
     docs.forEach(doc=>{
       doctorCount[doc]=(doctorCount[doc]||0)+1;
       if(!doctorMap[doc]) doctorMap[doc]={confirmed:0,return_ward:0};
-      if(r.admission_status==='confirmed') doctorMap[doc].confirmed++;
+      // นับ confirmed + discharged เป็นเข้า ICU
+      if(r.admission_status==='confirmed'||r.admission_status==='discharged') doctorMap[doc].confirmed++;
       if(r.admission_status==='return_ward') doctorMap[doc].return_ward++;
     });
   });
@@ -338,30 +343,28 @@ function renderTables(d) {
     return `<tr><td>${i+1}</td><td><b>${doc}</b></td><td>${cnt}</td><td style="color:#1e8449;">${dm.confirmed||0}</td><td style="color:#c0392b;">${dm.return_ward||0}</td></tr>`;
   }).join('') || '<tr><td colspan="5" style="text-align:center;color:#999;">ไม่มีข้อมูล</td></tr>';
 
-  // เข้า ICU แยก OR/Crisis
   function admTable(tableId, type) {
     var sub = d.filter(r=>r.form_type===type);
     var total = sub.length;
+    // เข้า ICU = confirmed + discharged
+    var admittedN = countAdmitted(sub);
     var rows = [
-      {label:'✅ เข้า ICU', val:'confirmed', color:'#1e8449'},
-      {label:'❌ ไม่เข้า ICU', val:'return_ward', color:'#c0392b'},
-      {label:'⏳ รอติดตาม', val:'pending', color:'#b9770e'},
+      {label:'✅ เข้า ICU (สะสม)', n: admittedN, color:'#0a5c36'},
+      {label:'❌ ไม่เข้า ICU',      n: count(sub,'admission_status','return_ward'), color:'#c0392b'},
+      {label:'⏳ รอติดตาม',         n: sub.filter(r=>(r.admission_status||'pending')==='pending').length, color:'#b9770e'},
     ];
     document.getElementById(tableId).innerHTML = rows.map(row=>{
-      var n = sub.filter(r=>(r.admission_status||'pending')===row.val).length;
-      var pct = total ? Math.round(n/total*100) : 0;
-      return `<tr><td style="color:${row.color};font-weight:600;">${row.label}</td><td>${n}</td><td>${pct}%</td></tr>`;
+      var pct = total ? Math.round(row.n/total*100) : 0;
+      return `<tr><td style="color:${row.color};font-weight:600;">${row.label}</td><td>${row.n}</td><td>${pct}%</td></tr>`;
     }).join('')+'<tr style="font-weight:700;border-top:2px solid #eee;"><td>รวม</td><td>'+total+'</td><td>100%</td></tr>';
   }
   admTable('admOrTable','or');
   admTable('admCrisisTable','crisis');
 }
 
-// auto login ถ้า session ยังอยู่
 fetch('/api/admin/check').then(r=>r.json()).then(d=>{
   if(d.isAdmin){ document.getElementById('loginBox').style.display='none'; document.getElementById('app').style.display='block'; loadData(); }
 });
 </script>
 </body>
 </html>
-PLACEHOLDER
