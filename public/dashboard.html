@@ -42,6 +42,9 @@
   .urg-btn.urgent { background:#f39c12; }
   .urg-btn.normal { background:#27ae60; }
   .action-sel { padding:5px 8px; border-radius:6px; border:1px solid #ddd; font-size:12px; cursor:pointer; background:#fff; }
+  .stat-card { background:#fff; border-radius:10px; padding:14px 16px; border:1px solid #e0e0e0; }
+  .stat-card .stat-num { font-size:26px; font-weight:700; margin:0; }
+  .stat-card .stat-label { font-size:11px; color:#888; margin-top:2px; }
   .adm-select { padding:4px 6px; border-radius:6px; border:1px solid #ddd; font-size:11px; cursor:pointer; }
   .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; }
   .modal-overlay.show { display:flex; }
@@ -77,6 +80,10 @@
     <section>
       <h2>สถานะเตียง ICU (คลิกเพื่อเปลี่ยนสถานะ)</h2>
       <div class="grid" id="bedsGrid"></div>
+    </section>
+    <section>
+      <h2>สถิติการเข้า ICU</h2>
+      <div id="statsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:8px;"></div>
     </section>
     <section>
       <h2>คำขอจองเตียง ICU</h2>
@@ -313,9 +320,33 @@ async function loadAll() {
     if (hasPending) { playAlert(); } else { stopAlert(); }
     lastSubCount = subs.length;
     renderBeds(beds);
+    renderStats();
     renderSubs();
     renderUsers(users);
   } catch(e) { console.log('error:', e); }
+}
+
+function renderStats() {
+  var s = allSubs;
+  var inICU      = s.filter(function(r){ return r.admission_status==='confirmed'; }).length;
+  var admitted   = s.filter(function(r){ return r.admission_status==='confirmed'||r.admission_status==='discharged'; }).length;
+  var notAdmit   = s.filter(function(r){ return r.admission_status==='return_ward'; }).length;
+  var discharged = s.filter(function(r){ return r.admission_status==='discharged'; }).length;
+  var totalReq   = s.length;
+
+  var cards = [
+    { num: totalReq,   label: 'คำขอทั้งหมด',       color: '#185fa5' },
+    { num: inICU,      label: 'กำลังอยู่ใน ICU',    color: '#27ae60' },
+    { num: admitted,   label: 'เข้า ICU สะสม',      color: '#0a5c36' },
+    { num: discharged, label: 'ย้ายกลับวอร์ดแล้ว',  color: '#8e44ad' },
+    { num: notAdmit,   label: 'ไม่เข้า ICU',         color: '#c0392b' },
+  ];
+  document.getElementById('statsGrid').innerHTML = cards.map(function(c){
+    return '<div class="stat-card">'
+      +'<p class="stat-num" style="color:'+c.color+'">'+c.num+'</p>'
+      +'<p class="stat-label">'+c.label+'</p>'
+      +'</div>';
+  }).join('');
 }
 
 function renderBeds(beds) {
@@ -559,7 +590,7 @@ async function releaseBedIfAssigned(id) {
   if (sub && sub.assigned_bed) {
     var beds = await fetch('/api/beds').then(function(r){return r.json();});
     var bed = beds.find(function(b){return b.label===sub.assigned_bed;});
-    if (bed) await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'available'})});
+    if (bed) await fetch('/api/admin/beds/'+bed.id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'cleaning'})});
   }
 }
 
