@@ -327,14 +327,17 @@ function checkCrisisExpiring(submissions) {
   if (!currentWard || crisisWarnSnoozed) return;
   var now = Date.now();
   var expiring = submissions.filter(function(r) {
-    if (r.form_type !== 'crisis' || r.ward !== currentWard) return false;
-    var age = now - new Date(r.submitted_at).getTime();
+    if ((r.form_type||'').toLowerCase() !== 'crisis' || r.ward !== currentWard) return false;
+    var ts = r.submitted_at || r.created_at;
+    if (!ts) return false;
+    var age = now - new Date(ts).getTime();
     return age >= 23 * 3600 * 1000 && age < 24 * 3600 * 1000;
   });
   var bar = document.getElementById('crisis-warn-bar');
   if (!expiring.length) { bar.style.display = 'none'; return; }
   document.getElementById('crisis-warn-items').innerHTML = expiring.map(function(r) {
-    var minLeft = Math.ceil((24 * 3600 * 1000 - (now - new Date(r.submitted_at).getTime())) / 60000);
+    var ts = r.submitted_at || r.created_at;
+    var minLeft = Math.ceil((24 * 3600 * 1000 - (now - new Date(ts).getTime())) / 60000);
     return '• ' + (r.patient_name||'-') + ' (HN: ' + (r.patient_hn||'-') + ') — เหลืออีก ≈ <b>' + minLeft + ' นาที</b>';
   }).join('<br>');
   bar.style.display = 'block';
@@ -379,8 +382,11 @@ async function loadData() {
     // ซ่อน crisis ที่ครบ 24 ชม. แล้ว
     var now = Date.now();
     var visible = all.filter(function(r) {
-      if (r.form_type !== 'crisis') return true;
-      return now - new Date(r.submitted_at).getTime() < 24 * 3600 * 1000;
+      var ft = (r.form_type || '').toLowerCase();
+      if (ft !== 'crisis') return true;
+      var ts = r.submitted_at || r.created_at;
+      if (!ts) return true; // ไม่มี timestamp → แสดงไว้ก่อน
+      return now - new Date(ts).getTime() < 24 * 3600 * 1000;
     });
 
     // filter ward
