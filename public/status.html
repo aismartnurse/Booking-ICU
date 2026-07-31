@@ -180,15 +180,18 @@ var statusLabel = {
   acknowledged:'✅ รับทราบ รอดำเนินการ',
   waiting_bed:'🟡 รับทราบ รอเตียงว่าง',
   completed:'🎉 ดำเนินการเสร็จสิ้น',
-  failed:'❌ ไม่สำเร็จ'
+  failed:'❌ ไม่สำเร็จ',
+  expired:'⏰ ครบ 24 ชั่วโมง'
 };
 var statusBg = {
   pending:'#fffdf5',acknowledged:'#f0fff4',
-  waiting_bed:'#fffde7',completed:'#e8f4fd',failed:'#fff5f5'
+  waiting_bed:'#fffde7',completed:'#e8f4fd',failed:'#fff5f5',
+  expired:'#f5f5f5'
 };
 var statusColor = {
   pending:'#b9770e',acknowledged:'#1e8449',
-  waiting_bed:'#b7770d',completed:'#1a5276',failed:'#c0392b'
+  waiting_bed:'#b7770d',completed:'#1a5276',failed:'#c0392b',
+  expired:'#888'
 };
 
 // ===== Clock =====
@@ -379,20 +382,13 @@ async function loadData() {
     // อัปเดต previousStatuses
     previousStatuses = newStatuses;
 
-    // ซ่อน crisis ที่ครบ 24 ชม. แล้ว
+    // แสดง crisis ทั้งหมด — สถานะเปลี่ยนอัตโนมัติเมื่อครบ 24 ชม.
     var now = Date.now();
-    var visible = all.filter(function(r) {
-      var ft = (r.form_type || '').toLowerCase();
-      if (ft !== 'crisis') return true;
-      var ts = r.submitted_at || r.created_at;
-      if (!ts) return true; // ไม่มี timestamp → แสดงไว้ก่อน
-      return now - new Date(ts).getTime() < 24 * 3600 * 1000;
-    });
 
     // filter ward
     var pending = currentWard
-      ? visible.filter(function(r){ return r.ward === currentWard; })
-      : visible;
+      ? all.filter(function(r){ return r.ward === currentWard; })
+      : all;
 
     // summary beds
     var c={available:0,occupied:0,cleaning:0,closed:0};
@@ -421,17 +417,25 @@ async function loadData() {
       ? pending.map(function(r){
           var extra=typeof r.extra_data==='string'?JSON.parse(r.extra_data):(r.extra_data||{});
           var st=r.status||'pending';
+          // crisis ที่ครบ 24 ชม. แต่ยัง pending → แสดงเป็น expired
+          var ft=(r.form_type||'').toLowerCase();
+          if(ft==='crisis' && st==='pending'){
+            var ts=r.submitted_at||r.created_at;
+            if(ts && now-new Date(ts).getTime()>=24*3600*1000) st='expired';
+          }
           var bg=statusBg[st]||'#fff';
           var sc=statusColor[st]||'#b9770e';
           var sb=statusBg[st]||'#fef5e7';
+          var stLabel=statusLabel[st]||st;
+          var ts2=r.submitted_at||r.created_at;
           return '<tr style="background:'+bg+';">'
-            +'<td>'+new Date(r.submitted_at).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</td>'
+            +'<td>'+(ts2?new Date(ts2).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'-')+'</td>'
             +'<td><b>'+(r.patient_name||'-')+'</b><br><span style="font-size:10px;color:#888;">HN: '+(r.patient_hn||'-')+'</span></td>'
             +'<td>'+(r.ward||'-')+'</td>'
-            +'<td><span class="badge '+(r.form_type||'')+'">'+(formType[r.form_type]||'-')+'</span></td>'
+            +'<td><span class="badge '+(r.form_type||'')+'">'+(formType[r.form_type]||r.form_type||'-')+'</span></td>'
             +'<td>'+(extra.booking_date||'-')+'</td>'
             +'<td>'+(urgDot[r.urgency||'normal']||'🟢')+'</td>'
-            +'<td><span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:'+sb+';color:'+sc+';">'+(statusLabel[st]||st)+'</span></td>'
+            +'<td><span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:'+sb+';color:'+sc+';">'+stLabel+'</span></td>'
             +'<td>'+(r.icu_type?'<span class="badge '+r.icu_type+'">'+(icuType[r.icu_type]||'-')+'</span>':'-')+'</td>'
             +'</tr>';
         }).join('')
